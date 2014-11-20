@@ -9,7 +9,7 @@
     ],
     "dependencies": {},
     "main": "main",
-    "description": "view封装库",
-    "homepage": "https://gitlab.com/fc-fe/fc-view",
-    "repository": "git://gitlab.com/fc-fe/fc-view"
+    "description": "FC 视图相关封装",
+    "homepage": "https://github.com/fcfe/fc-view",
+    "repository": "git://github.com/fcfe/fc-view"
 }
