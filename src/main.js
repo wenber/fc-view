@@ -4,7 +4,15 @@
  */
 
 define(function (require) {
-    var view = {};
+    'use strict';
+
+    /**
+     * fc-view 模块
+     * @module view
+     */
+    var view = {
+        version: '0.0.1-alpha.2'
+    };
 
     return view;
 });
