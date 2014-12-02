@@ -10,9 +10,6 @@ define(function (require) {
     var fc = require('fc-core');
     var _ = require('underscore');
     
-    // 在此直接屏蔽掉er.View的dispose，它会让container内容清空
-    require('er/View').prototype.dispose = function () {};
-    
     /**
      * @class meta.BaseView
      * @constructor
@@ -20,6 +17,8 @@ define(function (require) {
      */
     var proto = {};
     proto.constructor = function () {
+        // 指定了名字，但是新实例应该有不同的名字
+        this.name = this.name + '-' + fc.util.guid();
         // call super
         this.$super(arguments);
     };
@@ -107,19 +106,20 @@ define(function (require) {
                 }
 
                 for (var type in map) {
-                    if (map.hasOwnProperty(type)) {
-                        var handler = map[type];
-                        if (key.indexOf('@') === 0) {
-                            // group
-                            var groupid = key.split('@')[1];
-                            var group = me.getGroup(groupid);
-                            group && group.each(function (item) {
-                                bindEventToControl(me, item.id, type, handler);
-                            });
-                        }
-                        else {
-                            bindEventToControl(me, key, type, handler);
-                        }
+                    if (!map.hasOwnProperty(type)) {
+                        continue;
+                    }
+                    var handler = map[type];
+                    if (key.indexOf('@') === 0) {
+                        // group
+                        var groupid = key.split('@')[1];
+                        var group = me.getGroup(groupid);
+                        group && group.each(function (item) {
+                            bindEventToControl(me, item.id, type, handler);
+                        });
+                    }
+                    else {
+                        bindEventToControl(me, key, type, handler);
                     }
                 }
             }

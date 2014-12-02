@@ -18,7 +18,7 @@ define(function (require) {
      * @constructor
      * @extends er.Model
      */
-    var proto = {};
+    var overrides = {};
 
     // 原来ef.UIModel中的formatter在设置时会自动进行format处理
     // 但是这导致存入和取出的值格式不符，因此在这里没有融入此类处理
@@ -39,7 +39,7 @@ define(function (require) {
      * @throws {Error} 未提供`name`参数
      * @throws {Error} 未提供`value`参数
      */
-    proto.set = function (name, value, options) {
+    overrides.set = function (name, value, options) {
         if (!this.store) {
             throw new Error('This model is disposed');
         }
@@ -93,7 +93,7 @@ define(function (require) {
      * @throws {Error} 当前对象已经销毁
      * @throws {Error} 未提供`extension`参数
      */
-    proto.fill = function (extension, options) {
+    overrides.fill = function (extension, options) {
         if (!this.store) {
             throw new Error('This model is disposed');
         }
@@ -123,7 +123,7 @@ define(function (require) {
      * @throws {Error} 当前对象已经销毁
      * @throws {Error} 未提供`name`参数
      */
-    proto.remove = function (name, options) {
+    overrides.remove = function (name, options) {
         if (!this.store) {
             throw new Error('This model is disposed');
         }
@@ -162,14 +162,33 @@ define(function (require) {
      *
      * @return {Object} 一个普通的对象，修改该对象不会影响到当前{@link Model}对象
      */
-    proto.dump = function () {
+    overrides.dump = function () {
         // 为保证获取对象后修改不会影响到当前`Model`对象，需要做一次DEEP克隆的操作
         var returnValue = {};
         fc.util.deepExtend(returnValue, this.store);
         return returnValue;
     };
 
-    var BaseModel = fc.oo.derive(require('er/Model'), proto);
+    /**
+     * 根据传入的属性名获取一个组装后的对象
+     *
+     * @param {Array.<string> | string...} names 需要的属性名列表
+     * @return {Object} 包含`names`参数指定的属性的对象
+     */
+    overrides.getPart = function (names) {
+        if (Object.prototype.toString.call(names) !== '[object Array]') {
+            names = [].slice.call(arguments);
+        }
+
+        var part = {};
+        for (var i = 0; i < names.length; i++) {
+            var name = names[i];
+            part[name] = this.get(name);
+        }
+        return part;
+    };
+
+    var BaseModel = fc.oo.derive(require('er/Model'), overrides);
     BaseModel.formatter = require('./formatter');
 
     return BaseModel;
