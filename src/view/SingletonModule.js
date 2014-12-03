@@ -282,7 +282,7 @@ define(function (require) {
             // 创建Dialog
             me.control = fcui.create(
                 'Dialog',
-                fc.util.deepExtend(defaultOpts, me.dialogOptions, {
+                _.deepExtend(defaultOpts, me.dialogOptions, {
                     main: me.container,
                     closeOnHide: false  // 强制隐藏不关闭（即不销毁）
                 })

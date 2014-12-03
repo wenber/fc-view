@@ -8,7 +8,6 @@
 define(function (require) {
 
     var fc = require('fc-core');
-    
     /**
      * @class meta.BaseAction
      * @constructor
@@ -18,6 +17,10 @@ define(function (require) {
     proto.constructor = function () {
         // call super
         this.$super(arguments);
+    };
+
+    proto.handleError = function (errors) {
+        fc.util.processError(errors);
     };
 
     var BaseAction = fc.oo.derive(require('er/Action'), proto);

@@ -92,11 +92,5 @@ define(function (require) {
         return query;
     };
 
-    proto.load = function () {
-        // 先灌入defaultArgs
-        this.fill(this.getDefaultArgs, { silent: true });
-        return this.$super(arguments);
-    };
-
     return fc.oo.derive(require('./BaseModel'), proto);
 });

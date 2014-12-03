@@ -9,6 +9,7 @@
 
 define(function (require) {
 
+    var _ = require('underscore');
     var fc = require('fc-core');
     var Promise = require('fc-core/Promise');
     var erEvents = require('er/events');
@@ -181,7 +182,7 @@ define(function (require) {
     };
 
     proto.getActionOptions = function () {
-        return fc.util.deepExtend({}, this.actionOptions, this.model);
+        return _.deepExtend({}, this.actionOptions, this.model);
     };
 
     proto.finishRender = function () {

@@ -1,6 +1,6 @@
 {
     "name": "fc-view",
-    "version": "0.0.1-alpha.3",
+    "version": "0.0.1-alpha.4",
     "maintainers": [
         {
             "name": "Leo Wang",
@@ -8,9 +8,7 @@
         }
     ],
     "contributors": [],
-    "dependencies": {
-        "fc-core": "0.0.1-alpha.2"
-    },
+    "dependencies": {},
     "main": "main",
     "description": "FC 视图相关封装",
     "homepage": "https://github.com/fcfe/fc-view",
@@ -22,11 +20,10 @@
         "loaderAutoConfig": "js,htm,html,tpl,vm,phtml",
         "loaderUrl": "http://s1.bdstatic.com/r/www/cache/ecom/esl/1-8-6/esl.js",
         "dependencies": {
-            "eoo": "~0.1.1",
             "er": "~3.1.0-beta.5",
-            "etpl": "~3.0.0",
-            "mini-event": "~1.0.2",
-            "fcui": "~0.0.1-alpha.2"
+            "emc": "~1.0.0",
+            "fc-core": "0.0.1-alpha.2",
+            "fcui": "~0.0.1-alpha.4"
         }
     }
 }

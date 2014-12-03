@@ -322,7 +322,7 @@ define(function (require) {
             // 创建Dialog
             me.main = fcui.create(
                 'Dialog',
-                fc.util.deepExtend(defaultOpts, me.options.dialogOptions, {
+                _.deepExtend(defaultOpts, me.options.dialogOptions, {
                     main: me.container
                 })
             );
