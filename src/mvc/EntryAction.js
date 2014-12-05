@@ -1,35 +1,26 @@
 /**
- * @file
+ * @file EntryAction 入口级别基础类
  *
  * @author Leo Wang(wangkemiao@baidu.com)
  */
 
 define(function (require) {
-    
+
     var _ = require('underscore');
     var fc = require('fc-core');
 
-    var proto = {};
+    var overrides = {};
 
-    proto.constructor = function () {
+    overrides.constructor = function () {
         this.$super(arguments);
     };
 
-    proto.initBehavior = function () {
-        // this.model.on('change', _.bind(this.reloadWithUpdatedModel, this));
-        // 删掉tempViewContext
-        if (this.tempViewContext) {
-            this.tempViewContext.dispose();
-            this.tempViewContext = null;
-        }
-        this.customBehavior();
-    };
-
-    proto.enter = function (context) {
+    overrides.enter = function (context) {
         var entering = this.$super(arguments);
         // 先尝试渲染loading tpl
         // model一定有了，但是view不一定有
         if (!context.isChildAction
+            && !this.view
             && this.viewType && this.viewType.prototype) {
             try {
                 var tplName = this.viewType.prototype.template + '-loading';
@@ -51,7 +42,9 @@ define(function (require) {
                     properties: properties,
                     valueReplacer: _.bind(
                         require('ef/UIView').prototype.replaceValue,
-                        this.model
+                        {
+                            model: this.model.loadingData
+                        }
                     )
                 });
             }
@@ -63,9 +56,19 @@ define(function (require) {
         return entering;
     };
 
-    proto.customBehavior = function () { };
+    overrides.initBehavior = function () {
+        // this.model.on('change', _.bind(this.reloadWithUpdatedModel, this));
+        // 删掉tempViewContext
+        if (this.tempViewContext) {
+            this.tempViewContext.dispose();
+            this.tempViewContext = null;
+        }
+        this.customBehavior();
+    };
 
-    var EntryAction = fc.oo.derive(require('./BaseAction'), proto);
+    overrides.customBehavior = function () { };
+
+    var EntryAction = fc.oo.derive(require('./BaseAction'), overrides);
 
     return EntryAction;
 });

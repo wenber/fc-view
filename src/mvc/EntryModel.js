@@ -9,43 +9,29 @@ define(function (require) {
     var _ = require('underscore');
     var fc = require('fc-core');
 
-    var proto = {};
+    var overrides = {};
 
-    proto.constructor = function (context) {
+    overrides.constructor = function (context) {
+
+        var me = this;
+
         // fix context with defaultArgs
         var newContext = _.chain(context)
-            .defaults(this.getDefaultArgs())
+            .defaults(me.getDefaultArgs())
+            .extend({
+                context: require('./context').dump()
+            })
             .value();
         // call super
-        this.$super([newContext]);
+        me.$super([newContext]);
+
+        // 配置dataLoaderSet
+        _.each(me.dataLoaderSet, function (item) {
+            item.setStore(me);
+        });
     };
 
-    /**
-     * 获取去除一些默认key的Model，可以用做传递或者URL使用
-     */
-    proto.dumpForQuery = function () {
-        var dumpedModel = this.dump();
-        var toExclude = {
-            url: 1,
-            container: 1,
-            isChildAction: 1,
-            referrer: 1,
-            context: 1
-        };
-
-        var toReturn = {};
-        for (var k in dumpedModel) {
-            if (dumpedModel.hasOwnProperty(k) && !toExclude[k]) {
-                if (!_.isObject(dumpedModel[k])) {
-                    toReturn[k] = dumpedModel[k];
-                }
-            }
-        }
-
-        return toReturn;
-    };
-
-    proto.resolveQuery = function (data) {
+    overrides.resolveQuery = function (data) {
         var url = this.get('url');
         var query = url.getQuery();
 
@@ -61,23 +47,23 @@ define(function (require) {
         return require('er/URL').withQuery(path, query).toString();
     };
 
-    proto.loadingData = {
+    overrides.loadingData = {
         loading: '<span class="view-loading">加载中...</span>'
     };
 
-    proto.defaultArgs = {};
+    overrides.defaultArgs = {};
 
-    proto.getDefaultArgs = function () {
+    overrides.getDefaultArgs = function () {
         return this.defaultArgs || {};
     };
 
     /**
      * 获取附加的请求参数
      *
-     * @return {Object}
      * @protected
+     * @return {Object}
      */
-    proto.getExtraQuery = function () {
+    overrides.getExtraQuery = function () {
         return {};
     };
 
@@ -88,9 +74,21 @@ define(function (require) {
      * @return {Object}
      * @protected
      */
-    proto.filterQuery = function(query) {
+    overrides.filterQuery = function(query) {
         return query;
     };
 
-    return fc.oo.derive(require('./BaseModel'), proto);
+    /**
+     * 销毁处理
+     */
+    overrides.dispose = function () {
+        var me = this;
+        // 配置dataLoaderSet
+        _.each(me.dataLoaderSet, function (item) {
+            item.setStore(null);
+        });
+        me.$super(arguments);
+    };
+
+    return fc.oo.derive(require('./BaseModel'), overrides);
 });

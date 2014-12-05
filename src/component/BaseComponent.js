@@ -1,9 +1,6 @@
 /**
- * @file fc-view/view/SingletonModule 基础单例子模块类，供公共调用
- * SingletonModule类的提出并不是为了ER的子Action服务，而是为了公共模块服务
- * 本类只提供了template功能
- *
- * 使用模式：先show，再on事件，某个时间点直接hide即可
+ * @file fc-view/component/BaseComponent 基础类
+ * 本类提供一个可复用的组件化机制下的基础Component类，本类为虚类，请使用实体类
  *
  * @author Leo Wang(wangkemiao@baidu.com)
  */
@@ -17,9 +14,11 @@ define(function (require) {
     var Promise = require('fc-core/Promise');
     var ViewContext = require('fcui/ViewContext');
     var LifeStage = require('./LifeStage');
+    var BaseModel = require('../mvc/BaseModel');
 
     require('fcui/Panel');
     require('fcui/Dialog');
+
 
     /**
      * 判断是否支持html5
@@ -29,7 +28,8 @@ define(function (require) {
         try {
             document.createElement('canvas').getContext('2d');
             return true;
-        } catch (e) {
+        }
+        catch (e) {
             return false;
         }
     })();
@@ -38,24 +38,27 @@ define(function (require) {
      * 默认样式类
      * @type {string}
      */
-    var BASIC_CLASS = 'singleton-module-basic';
+    var BASIC_CLASS = 'component-basic';
 
     /**
-     * SingletonModule类
+     * BaseComponent类
      * @constructor
-     * @class SingletonModule
+     * @class BaseComponent
      * @extends fc.EventTarget
      *
+     * 生命周期：using LifeStage
+     * NEW -> INITED -> RENDERED -> REPAINTED -> DISPOSE
+     *
      * 对外事件暴露
-     * SingletonModule#inited 初始化完成
-     * SingletonModule#rendered 渲染完成
-     * SingletonModule#repainted 重绘完成
-     * SingletonModule#disposed 销毁完成
-     * SingletonModule#showed
-     * SingletonModule#hided
-     * SingletonModule#closed 界面关闭 之后会自动触发销毁
-     * SingletonModule#loading 标记为加载中，仅在Model为异步时或者子Action模式时触发
-     * SingletonModule#loaded 标记为加载完成，仅在Model为异步时或者子Action模式时触发
+     * BaseComponent#inited 初始化完成
+     * BaseComponent#rendered 渲染完成
+     * BaseComponent#repainted 重绘完成
+     * BaseComponent#disposed 销毁完成
+     * BaseComponent#showed
+     * BaseComponent#hided
+     * BaseComponent#closed 界面关闭 之后会自动触发销毁
+     * BaseComponent#loading 标记为加载中，仅在Model为异步时或者子Action模式时触发
+     * BaseComponent#loaded 标记为加载完成，仅在Model为异步时或者子Action模式时触发
      *
      * 环境访问
      * 获取UI：
@@ -76,7 +79,9 @@ define(function (require) {
         this.guid = fc.util.guid();
         this.name += '-' + this.guid;
         this.lifeStage = new LifeStage(this);
-        this.viewContext = new ViewContext(this.name);
+
+        // 提供手动初始化
+        this.initialize();
 
         // 请注意，生命周期的改变会自动fire同名事件
         this.lifeStage.changeTo(LifeStage.INITED);
@@ -86,21 +91,35 @@ define(function (require) {
      * 基础类名
      * @type {string}
      */
-    overrides.name = 'singleton-module-basic';
+    overrides.name = 'component';
+
+    /**
+     * 手动初始化方法
+     */
+    overrides.initialize = _.noop;
+
+    /**
+     * 获取ViewContext
+     * @return {fcui.ViewContext}
+     */
+    overrides.getViewContext = function () {
+        if (!this.viewContext) {
+            this.viewContext = new ViewContext(this.name);
+        }
+        return this.viewContext;
+    };
 
     /**
      * 获取主体容器的样式
+     * @return {string}
      */
     overrides.getClassName = function () {
-        var className = BASIC_CLASS + (supportHtml5 ? ' html5': '');
-        if (this.className) {
-            className += ' ' + this.className;
-        }
-        return className;
+        return this.className || '';
     };
 
     /**
      * 失败处理
+     * @param {mini-Event.Event} e 错误事件参数
      */
     overrides.handleError = function (e) {
         fc.util.processError(e);
@@ -146,31 +165,30 @@ define(function (require) {
     overrides.model = null;
 
     /**
+     * model类名，构造器
+     * @type {?Model}
+     */
+    overrides.modelType = null;
+
+    /**
      * 获取数据对象
      * @return {Promise|meta.Model|Object} Promise对象或者Model对象或Object
      */
     overrides.getModel = function () {
-        var me = this;
-        if (me.model) {
-            if (typeof me.model === 'function') {
-                var modelResult = me.model();
-                if (Promise.isPromise(modelResult)) {
-                    return modelResult.then(
-                        function (result) {
-                            me.model = result;
-                        },
-                        // 这里控制了进行handleError处理，可能吞掉了Model执行的失败传递
-                        // 因此如果传入的是一个方法，确保在其中就进行了容错处理
-                        _.bind(me.handleError, me)
-                    );
-                }
-                me.model = modelResult;
+        if (!this.model) {
+            if (this.modelType) {
+                // fecs……
+                var ModelType = this.modelType;
+                this.model = new ModelType();
+            }
+            else {
+                this.model = new BaseModel();
             }
         }
-        else {
-            me.model = {};
+        else if (!(this.model instanceof BaseModel)) {
+            this.model = new BaseModel(this.model);
         }
-        return me.model;
+        return this.model;
     };
 
     /**
@@ -192,7 +210,7 @@ define(function (require) {
      * UI事件配置
      * @property
      * @type {?Object}
-     * @this {SingletonModule}
+     * @this {BaseComponent}
      */
     overrides.uiEvents = null;
 
@@ -206,6 +224,9 @@ define(function (require) {
 
     /**
      * 线性获取值的方法…… 例如getProperty(a, 'b.c')相当于a.b.c或a.get(b).c
+     * @param {Object} target 数据所在
+     * @param {string} path 获取路径
+     * @return {*}
      */
     function getProperty(target, path) {
         var value = target;
@@ -237,25 +258,35 @@ define(function (require) {
 
         if (prefix === '@' || prefix === '*') {
             var path = actualValue.split('.');
-            var value = typeof this.model.get === 'function'
+            var result = typeof this.model.get === 'function'
                 ? this.model.get(path[0])
                 : this.model[path[0]];
             return path.length > 1
-                ? getProperty(value, path.slice(1))
-                : value;
+                ? getProperty(result, path.slice(1))
+                : result;
         }
-        else {
-            return value;
-        }
+
+        return value;
     };
+
+    function getClassName() {
+        var classNames = [BASIC_CLASS];
+        if (supportHtml5) {
+            classNames.push('html5');
+        }
+        var thisClassName = this.getClassName();
+        if (thisClassName) {
+            classNames.push(thisClassName);
+        }
+        return classNames.join(' ');
+    }
 
     /**
      * 创建主体容器
-     * @return {meta.Promise} 异步状态
      */
     overrides.initStructure = function () {
 
-        fc.assert.has(this.viewContext, '创建容器时必须已经创建了ViewContext');
+        var viewContext = this.getViewContext();
 
         if (typeof this.container === 'string') {
             this.container = document.getElementById(this.container);
@@ -265,13 +296,13 @@ define(function (require) {
         var defaultOpts = {
             id: me.name,
             main: me.container,
-            viewContext: me.viewContext,
+            viewContext: viewContext,
             needFoot: true,
             renderOptions: {
                 properties: me.getUIProperties(),
                 valueReplacer: _.bind(me.replaceValue, me)
             }
-        }
+        };
 
         if (!me.container) {
             // 创建容器元素
@@ -288,8 +319,12 @@ define(function (require) {
             );
 
             // 部分事件代理过来
-            me.control.on('close', function () { me.fire('hide') });
-            me.control.on('hide', function () { me.fire('hide') });
+            me.control.on('close', function () {
+                me.fire('hide');
+            });
+            me.control.on('hide', function () {
+                me.fire('hide');
+            });
 
             // 立即展现
             me.control.show();
@@ -299,16 +334,32 @@ define(function (require) {
             me.control.render();
         }
 
-        var model = me.getModel();
-        if (Promise.isPromise(model)) {
-            me.fire('loading');
-            return model.ensure(function () {
-                me.fire('loaded');
-            });
-        }
-
-        return Promise.resolve(me.control);
+        // 增加className
+        me.container.className += ' ' + getClassName.call(me);
     };
+
+    overrides.prepare = _.noop;
+
+
+    /**
+     * 模板的HTML，优先级高于templateName
+     */
+    overrides.template = null;
+
+    /**
+     * 模板的名称
+     */
+    overrides.templateName = null;
+
+    /**
+     * loading的HTML，优先级高于loadingTemplateName
+     */
+    overrides.loadingTemplate = null;
+
+    /**
+     * loading的模板名称
+     */
+    overrides.loadingTemplateName = null;
 
     /**
      * 主体内容渲染器
@@ -327,49 +378,114 @@ define(function (require) {
             }
 
             if (!this.renderer) {
-                this.renderer = function () { return ''; };
+                this.renderer = function () {
+                    return '';
+                };
             }
         }
         return this.renderer;
     };
 
-    overrides.render = function () {
-        if (!this.lifeStage.is(LifeStage.NEW | LifeStage.INITED)) {
-            this.repaint();
-            return Promise.resolve();
+    /**
+     * loading内容渲染器
+     */
+    overrides.loadingRenderer = null;
+    overrides.getLoadingRenderer = function () {
+        if (this.renderer == null) {
+            // 渲染器
+            if (this.loadingTemplate) {
+                this.loadingRenderer = fc.tpl.compile(this.loadingTemplate);
+            }
+            else if (this.loadingTemplateName) {
+                this.loadingRenderer = fc.tpl.getRenderer(
+                    this.loadingTemplateName
+                );
+            }
+
+            if (!this.loadingRenderer) {
+                this.loadingRenderer = function () {
+                    return '加载中...';
+                };
+            }
+        }
+        return this.loadingRenderer;
+    };
+
+    overrides.enter = function () {
+        var me = this;
+        var state;
+        if (!me.lifeStage.is(LifeStage.NEW | LifeStage.INITED)) {
+            me.control.show();
+            state = me.repaint();
+        }
+        else {
+            state = me.render();
         }
 
-        return this.initStructure().then(
-            _.bind(this.finishRender, this)
-        ).catch(_.bind(this.handleError, this));
+        return state.then(function () {
+            if (me.lifeStage.is(LifeStage.RENDERED)) {
+                me.initUIEvents();
+                // 供外部来处理交互
+                me.initBehavior();
+            }
+        });
+    };
+
+    overrides.render = function () {
+        // 初始化结构
+        this.initStructure();
+
+        var model = this.getModel();
+        this.fire('loading');
+
+        // 显示loading界面
+        var loadingRenderer = this.getLoadingRenderer();
+        this.control.setProperties({
+            content: loadingRenderer(Promise.isPromise(model) ? {} : model)
+        });
+
+        return model.load()
+            .then(_.bind(this.prepare, this))
+            .then(_.bind(this.finishRender, this))
+            .catch(_.bind(this.handleError, this));
     };
 
     overrides.finishRender = function () {
+        this.fire('loaded');
         var renderer = this.getRenderer();
 
         if (renderer) {
             this.control.setProperties({
-                content: renderer(this.model)
+                content: renderer(this.getModel())
             });
         }
-
-        this.initUIEvents();
-
-        // 供外部来处理交互
-        this.initBehavior();
 
         // 请注意，生命周期的改变会自动fire同名事件
         this.lifeStage.changeTo(LifeStage.RENDERED);
     };
 
+    overrides.repaint = function () {
+        var renderer = this.getRenderer();
+        if (renderer) {
+            this.control.setContent(renderer(this.getModel()));
+        }
+
+        // 请注意，生命周期的改变会自动fire同名事件
+        this.lifeStage.changeTo(LifeStage.REPAINTED);
+
+        return Promise.resolve();
+    };
+
+    overrides.initBehavior = function () {};
+
     /**
      * 给指定的控件绑定事件
      *
-     * @param {SingletonModule} module SingletonModule对象实例
+     * @param {BaseComponent} module BaseComponent对象实例
      * @param {string} id 控件的id
      * @param {string} eventName 事件名称
-     * @param {function | string} handler 事件处理函数，或者对应的方法名
-     * @return {function} 绑定到控件上的事件处理函数，不等于`handler`参数
+     * @param {Function | string} handler 事件处理函数，或者对应的方法名
+     * @return {Function} 绑定到控件上的事件处理函数，不等于`handler`参数
      * @inner
      */
     function bindEventToControl(module, id, eventName, handler) {
@@ -393,11 +509,10 @@ define(function (require) {
     /**
      * 给指定的控件组批量绑定事件，相同的处理
      *
-     * @param {SingletonModule} module SingletonModule对象实例
+     * @param {BaseComponent} module BaseComponent对象实例
      * @param {string} groupid 控件组的id
      * @param {string} eventName 事件名称
      * @param {function | string} handler 事件处理函数，或者对应的方法名
-     * @return {function} 绑定到控件上的事件处理函数，不等于`handler`参数
      * @inner
      */
     function bindEventToGroup(module, groupid, eventName, handler) {
@@ -444,112 +559,37 @@ define(function (require) {
                 var map = uiEvents[key];
                 fc.assert.equals(_.isObject(map), true, 'uiEvents必须是对象！');
 
-                for (var type in map) {
-                    if (!map.hasOwnProperty(type)) {
+                for (var gType in map) {
+                    if (!map.hasOwnProperty(gType)) {
                         continue;
                     }
-                    var handler = map[type];
+                    var gHandler = map[gType];
                     if (key.charAt(0) === '@') {
                         // group处理
-                        bindEventToGroup(me, key.substring(1), type, handler);
+                        bindEventToGroup(me, key.substring(1), gType, gHandler);
                     }
                     else {
-                        bindEventToControl(me, key, type, handler);
+                        bindEventToControl(me, key, gType, gHandler);
                     }
                 }
             }
         }
     };
 
-    overrides.initBehavior = function () {};
-
-    overrides.repaint = function () {
-        var renderer = this.getRenderer();
-
-        // this.control.setProperties({
-        //     content: renderer(this.model)
-        // });
-        if (renderer) {
-            this.control.setContent(renderer(this.model))
-        }
-
-        // 请注意，生命周期的改变会自动fire同名事件
-        this.lifeStage.changeTo(LifeStage.REPAINTED);
-    };
-
     overrides.show = function () {
         var me = this;
-        if (me.lifeStage.is(LifeStage.NEW | LifeStage.INITED)) {
-            me.render().then(function () {
-                me.fire('showed');
-            }).catch(_.bind(me.handleError, me));
-        }
-        else {
-            me.control.show();
-            me.repaint();
+
+        me.enter().then(function () {
             me.fire('showed');
-        }
-
-        // 并且开始监听这时候开始所有注册的事件
-        listenPostEvent.call(me);
+        }).catch(_.bind(me.handleError, me));
     };
-
-    /**
-     * @type {?Array.<Object>}
-     * 元素的key为：type, handler, thisObject
-     */
-    overrides._postEvents = null;
-
-    /**
-     * 扩展的注册一个事件处理函数
-     *
-     * @param {string} type 事件的类型
-     * @param {Function | boolean} fn 事件的处理函数，
-     * 特殊地，如果此参数为`false`，将被视为特殊的事件处理函数，
-     * 其效果等于`preventDefault()`及`stopPropagation()`
-     * @param {Mixed} [thisObject] 事件执行时`this`对象
-     * @param {Object} [options] 事件相关配置项
-     * @param {boolean} [options.once=false] 控制事件仅执行一次
-     */
-    overrides._extendedOn = function (type, fn, thisObject, options) {
-        this._postEvents.push({
-            type: type,
-            handler: fn,
-            thisObject: thisObject
-        });
-        return this._originalOn(type, fn, thisObject, options);
-    };
-
-    function listenPostEvent() {
-        var me = this;
-
-        clearPostEvent.call(me);
-
-        // 开始监听
-        me._originalOn = me.on;
-        me.on = me._extendedOn;
-    }
-
-    function clearPostEvent() {
-        var me = this;
-        // 如果存在，则清理
-        if (me._postEvents) {
-            _.each(me._postEvents, function (item) {
-                me.un(item.type, item.handler, item.thisObject);
-            });
-        }
-        me._postEvents = [];
-        me.on = me._originalOn || me.on;
-    }
 
     overrides.hide = function () {
         this.control.hide();
         this.fire('hided');
-        // 并且清除本次展现期间注册的事件
-        clearPostEvent.call(this);
     };
 
-    var SingletonModule = fc.oo.derive(EventTarget, overrides);
+    var BaseComponent = fc.oo.derive(EventTarget, overrides);
 
-    return SingletonModule;
+    return BaseComponent;
 });

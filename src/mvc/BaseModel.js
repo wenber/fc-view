@@ -12,8 +12,8 @@ define(function (require) {
     var _ = require('underscore');
     var fc = require('fc-core');
     var Promise = require('fc-core/Promise');
-    var DataLoader = require('./DataLoader');
-    
+    require('./DataLoader');
+
     /**
      * 在ER框架中，Model并不一定要继承该类，任何对象都可以作为Model使用
      *
@@ -29,12 +29,12 @@ define(function (require) {
      * @class meta.BaseModel
      *
      * @extends emc.Model
-     * @param {Object} [context] 初始化的数据
      */
     var overrides = {};
 
     /**
      * @constructor
+     * @param {Object} context 初始化的数据
      */
     overrides.constructor = function (context) {
         this.$super(arguments);
@@ -59,7 +59,7 @@ define(function (require) {
      */
     overrides.load = function () {
         var dataLoader = this.getDataLoader();
-        var loading = Promise.cast(dataLoader ? dataLoader.load() : undefined);
+        var loading = Promise.cast(dataLoader ? dataLoader.load() : []);
         if (this.prepare) {
             return loading.then(_.bind(this.forwardToPrepare, this));
         }
@@ -70,9 +70,10 @@ define(function (require) {
      * 加载数据后进入数据准备阶段
      *
      * @method BaseModel#.forwardToPrepare
+     * @protected
      *
      * @param {meta.DataLoadResult[]} results 数据加载的结果集
-     * @protected
+     * @return {meta.DataLoadResult[]} 数据加载的结果集
      */
     overrides.forwardToPrepare = function (results) {
         return new Promise(_.bind(this.prepare, this)).then(
@@ -109,16 +110,15 @@ define(function (require) {
      * 需要使用传入的`resolve`和`reject`方法来改变状态
      *
      * @method BaseModel#.prepare
+     * @protected
      * @param {Function} resolve 标记当前为完成
      * @param {Function} reject 标记当前为拒绝
-     * @return {Promise | undefined} 如果`prepare`的逻辑中有异步操作，则返回一个{@link Promise}对象，通知调用者等待
-     * @protected
      */
     overrides.prepare = function (resolve, reject) {
         resolve();
     };
 
-    /**
+    /*
      * 根据传入的属性名获取一个组装后的对象
      *
      * @param {Array.<string> | string...} names 需要的属性名列表

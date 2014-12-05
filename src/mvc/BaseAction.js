@@ -13,16 +13,16 @@ define(function (require) {
      * @constructor
      * @extends er.Action
      */
-    var proto = {};
-    proto.constructor = function () {
+    var overrides = {};
+    overrides.constructor = function () {
         // call super
         this.$super(arguments);
     };
 
-    proto.handleError = function (errors) {
+    overrides.handleError = function (errors) {
         fc.util.processError(errors);
     };
 
-    var BaseAction = fc.oo.derive(require('er/Action'), proto);
+    var BaseAction = fc.oo.derive(require('er/Action'), overrides);
     return BaseAction;
 });

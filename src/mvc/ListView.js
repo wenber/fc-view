@@ -5,18 +5,16 @@
  */
 
 define(function (require) {
-    var _ = require('underscore');
     var fc = require('fc-core');
 
     /**
      * 列表形式的MVC - View
      */
     var overrides = {};
-    
+
     /**
      * 收集查询参数并触发查询事件
      *
-     * @param {ListView} this 当前视图实例
      * @param {mini-event.Event} e 控件事件对象
      */
     overrides.submitSearch = function (e) {
@@ -53,7 +51,7 @@ define(function (require) {
         //     // 关键词去空格
         //     args.keyword = u.trim(keyword.getValue());
         // }
-        
+
         // // 日期是独立的
         // var range = this.get('range');
         // if (range) {

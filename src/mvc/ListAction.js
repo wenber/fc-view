@@ -10,7 +10,6 @@ define(function (require) {
     var _ = require('underscore');
     var fc = require('fc-core');
 
-    var tableUtil = require('common/tableUtil');
     var viewUtil = require('common/viewUtil');
 
     require('fcui/Table');
@@ -22,7 +21,11 @@ define(function (require) {
      */
     var overrides = {};
 
-    overrides.customBehavior = function () {
+    /**
+     * 初始化交互
+     */
+    overrides.initBehavior = function () {
+        this.$super(arguments);
         this.view.on('search', function (e) {
             this.redirect(this.model.resolveQuery(e.data));
         }, this);
@@ -83,7 +86,8 @@ define(function (require) {
      * @param {Object=} e.data.args 本次执行方法的参数
      * @param {number|Array.<number>} e.data.row 表示所在行，如果是多个则为批量
      * @param {number|Array.<number>=} e.data.col 表示所在列，会影响刷新模式
-     * @param {extraRowData=} 额外的参数，在执行成功后补充入saved事件的newData中
+     * @param {Object=} extraRowData 额外的参数，在执行成功后补充入saved事件的newData
+     * @return {Promise}
      */
     function inlineModify(method, e, extraRowData) {
         var me = this;
@@ -117,6 +121,7 @@ define(function (require) {
                 );
 
                 // 行更新
+                clearRowLoading(listTable);
                 _.each(processedData, function (item, index) {
                     var newData = _.extend(
                         listTable.datasource[index],
@@ -124,7 +129,7 @@ define(function (require) {
                         extraRowData
                     );
                     if (newData) {
-                        listTable.updateRowAt(row, newData)
+                        listTable.updateRowAt(row, newData);
                     }
                 });
             });
@@ -139,12 +144,13 @@ define(function (require) {
      * @param {Object=} e.data.args 本次执行方法的参数
      * @param {number|Array.<number>} e.data.row 表示所在行，如果是多个则为批量
      * @param {number|Array.<number>=} e.data.col 表示所在列，会影响刷新模式
-     * @param {extraRowData=} 额外的参数，在执行成功后补充入saved事件的newData中
+     * @param {Object=} extraRowData 额外的参数，在执行成功后补充入saved事件的newData
+     * @return {Promise}
      */
     function multiModify(method, e, extraRowData) {
         var me = this;
         var row = e.data.row;
-        var col = e.data.col;
+        // var col = e.data.col;
         var args = e.data.args;
 
         var listTable = this.view.get('list-table');
@@ -177,6 +183,7 @@ define(function (require) {
                     }
                 );
                 // 刷新表格
+                clearRowLoading(listTable);
                 listTable.setDatasource(updatedDatasource);
                 listTable.setRowSelected(row, true);
                 require('common/messager').notify(
@@ -196,6 +203,8 @@ define(function (require) {
      * @param {Object=} e.data.args 本次执行方法的参数
      * @param {number|Array.<number>} e.data.row 表示所在行，如果是多个则为批量
      * @param {number|Array.<number>=} e.data.col 表示所在列，会影响刷新模式
+     * @param {Object=} extraRowData 额外的参数，在执行成功后补充入saved事件的newData
+     * @return {Promise}
      */
     overrides.executeModifyCommand = function (method, e, extraRowData) {
         fc.assert.has(method, 'executeModifyCommand方法必须指定参数`method`');
@@ -217,9 +226,18 @@ define(function (require) {
 
     /**
      * 修改行为执行成功之后处理返回的数据，类似于table的datasource，然后更新表格
+     * @param {Object} response 执行结果
+     * @param {Object} e 事件的参数
+     * @param {string} e.type 事件类型，例如pause
+     * @param {Object} e.data 事件附带数据
+     * @param {Object=} e.data.args 本次执行方法的参数
+     * @param {number|Array.<number>} e.data.row 表示所在行，如果是多个则为批量
+     * @param {number|Array.<number>=} e.data.col 表示所在列，会影响刷新模式
+     * @param {Object=} extraRowData 额外的参数，在执行成功后补充入saved事件的newData
      * @return {Object} key为行索引，value为具体值
      */
-    overrides.processExecuteModifyResponse = function (response, e, extraData) {
+    overrides.processExecuteModifyResponse = function (
+        response, e, extraRowData) {
         return response;
     };
 

@@ -82,7 +82,6 @@ define(function (require) {
      * 检查是否是指定状态
      * @param {string} stageKey LifeStage.LIFE_STAGE.key
      *     参数必须为指定常量值，即使用必须为LifeStage.INITED这种
-     * @return {boolean}
      */
     LifeStage.prototype.is = function (stageKey) {
         return !!(stageKey & this.stage);
