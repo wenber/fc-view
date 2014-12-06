@@ -8,6 +8,7 @@ define(function (require) {
 
     var _ = require('underscore');
     var fc = require('fc-core');
+    var Model = require('emc/Model');
 
     var overrides = {};
 
@@ -41,9 +42,9 @@ define(function (require) {
                     viewContext: this.tempViewContext,
                     properties: properties,
                     valueReplacer: _.bind(
-                        require('ef/UIView').prototype.replaceValue,
+                        require('./BaseView').prototype.replaceValue,
                         {
-                            model: this.model.loadingData
+                            model: new Model(this.model.loadingData)
                         }
                     )
                 });
@@ -56,17 +57,14 @@ define(function (require) {
         return entering;
     };
 
-    overrides.initBehavior = function () {
-        // this.model.on('change', _.bind(this.reloadWithUpdatedModel, this));
+    overrides.forwardToView = function () {
         // 删掉tempViewContext
         if (this.tempViewContext) {
             this.tempViewContext.dispose();
             this.tempViewContext = null;
         }
-        this.customBehavior();
+        this.$super(arguments);
     };
-
-    overrides.customBehavior = function () { };
 
     var EntryAction = fc.oo.derive(require('./BaseAction'), overrides);
 

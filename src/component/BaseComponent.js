@@ -42,7 +42,6 @@ define(function (require) {
 
     /**
      * BaseComponent类
-     * @constructor
      * @class BaseComponent
      * @extends fc.EventTarget
      *
@@ -72,19 +71,49 @@ define(function (require) {
      * 销毁界面：instance.close()
      *
      * 交互控制
-     * 建议子类处理交互方法：initBehavior
+     * 交互处理方法：initBehavior
+     *
      */
     var overrides = {};
-    overrides.constructor = function () {
+    /**
+     * 构造函数
+     * @constructor
+     * @param {Object} options 配置
+     * @param {ViewContext} options.viewContext ui环境
+     * @param {BaseModel} options.model 数据Model
+     * @param {HtmlElement | string} container 容器
+     * @param {string} template 模板内容
+     */
+    overrides.constructor = function (options) {
         this.guid = fc.util.guid();
         this.name += '-' + this.guid;
         this.lifeStage = new LifeStage(this);
+
+        // 处理options
+        this.initOptions(options);
 
         // 提供手动初始化
         this.initialize();
 
         // 请注意，生命周期的改变会自动fire同名事件
         this.lifeStage.changeTo(LifeStage.INITED);
+    };
+
+    /**
+     * 处理配置，转为类的属性
+     * @param {Object} options 配置
+     * @param {ViewContext} options.viewContext ui环境
+     * @param {BaseModel} options.model 数据Model
+     * @param {HtmlElement | string} container 容器
+     * @param {string} template 模板内容
+     */
+    overrides.initOptions = function (options) {
+        options = options || {};
+        this.viewContext = options.viewContext;
+        // this.templateData = options.templateData;
+        this.model = options.model;
+        this.container = options.container;
+        this.template = options.template;
     };
 
     /**
@@ -179,16 +208,47 @@ define(function (require) {
             if (this.modelType) {
                 // fecs……
                 var ModelType = this.modelType;
-                this.model = new ModelType();
+                this.model = new ModelType(this.templateData);
             }
             else {
-                this.model = new BaseModel();
+                this.model = new BaseModel(this.templateData);
             }
         }
         else if (!(this.model instanceof BaseModel)) {
             this.model = new BaseModel(this.model);
         }
         return this.model;
+    };
+
+    /**
+     * 获取模板数据
+     * @return {Object} 为etpl定制的templateData
+     */
+    overrides.getTemplatedData = function () {
+
+        var model = this.getModel();
+        if (Promise.isPromise(model)) {
+            return {};
+        }
+
+        if (model && typeof model.get !== 'function') {
+            var Model = require('../mvc/BaseModel');
+            model = new Model(model);
+        }
+
+        var visit = function (propertyPath) {
+            var path = propertyPath.replace(/\[(\d+)\]/g, '.$1').split('.');
+            var propertyName = path.shift();
+            var value = model.get(propertyName);
+
+            while (value && (propertyName = path.shift())) {
+                value = value[propertyName];
+            }
+
+            return value;
+        };
+
+        return {get: visit, relatedModel: model};
     };
 
     /**
@@ -441,7 +501,7 @@ define(function (require) {
         // 显示loading界面
         var loadingRenderer = this.getLoadingRenderer();
         this.control.setProperties({
-            content: loadingRenderer(Promise.isPromise(model) ? {} : model)
+            content: loadingRenderer(this.getTemplatedData())
         });
 
         return model.load()
@@ -456,7 +516,7 @@ define(function (require) {
 
         if (renderer) {
             this.control.setProperties({
-                content: renderer(this.getModel())
+                content: renderer(this.getTemplatedData())
             });
         }
 
@@ -467,7 +527,7 @@ define(function (require) {
     overrides.repaint = function () {
         var renderer = this.getRenderer();
         if (renderer) {
-            this.control.setContent(renderer(this.getModel()));
+            this.control.setContent(renderer(this.getTemplatedData()));
         }
 
         // 请注意，生命周期的改变会自动fire同名事件

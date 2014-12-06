@@ -1,12 +1,9 @@
 /**
- * @file
+ * @file 公共环境数据，内存存储
  *
  * @author Leo Wang(wangkemiao@baidu.com)
  */
 
 define(function (require) {
-    var _ = require('underscore');
-    var fc = require('fc-core');
-
     return require('fc-storage/memory');
 });

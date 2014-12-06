@@ -11,9 +11,10 @@ define(function (require) {
     var _ = require('underscore');
 
     /**
+     * 基于er.View，参考ef.UIView进行处理
      * @class meta.BaseView
      * @constructor
-     * @extends ef.UIView
+     * @extends er.View
      */
     var overrides = {};
     overrides.constructor = function () {
@@ -28,6 +29,181 @@ define(function (require) {
      * @type {string}
      */
     overrides.name = 'fc-view-mvc-BaseView';
+
+    function getProperty(target, path) {
+        var value = target;
+        for (var i = 0; i < path.length; i++) {
+            value = value[path[i]];
+        }
+
+        return value;
+    }
+
+    /**
+     * 替换元素属性中的特殊值
+     *
+     * @param {string} value 需要处理的值
+     * @return {*} 处理完的值
+     * @public
+     */
+    overrides.replaceValue = function (value) {
+        if (typeof value !== 'string') {
+            return value;
+        }
+
+        if (value === '@@' || value === '**') {
+            return this.model;
+        }
+
+        var prefix = value.charAt(0);
+        var actualValue = value.substring(1);
+
+        if (prefix === '@' || prefix === '*') {
+            var path = actualValue.split('.');
+            var gValue = this.model.get(path[0]);
+            return path.length > 1
+                ? getProperty(gValue, path.slice(1))
+                : gValue;
+        }
+
+        return value;
+    };
+
+    /**
+     * 根据id获取当前视图下的控件
+     * @protected
+     *
+     * @param {string} id 控件的id
+     * @return {?fcui.Control} 对应的控件
+     */
+    overrides.get = function (id) {
+        return this.viewContext.get(id);
+    };
+
+    /**
+     * 根据id获取控件实例，如无相关实例则返回`esui.SafeWrapper`
+     *
+     * @param {string} id 控件id
+     * @return {fcui.Control} 根据id获取的控件
+     */
+    overrides.getSafely = function (id) {
+        return this.viewContext.getSafely(id);
+    };
+
+    /**
+     * 根据name获取当前视图下的控件组
+     *
+     * @param {string} name 控件组的名称
+     * @return {fcui.ControlGroup} 对应的控件组
+     * @protected
+     */
+    overrides.getGroup = function (name) {
+        return this.viewContext.getGroup(name);
+    };
+
+    /**
+     * 创建一个控件实例
+     *
+     * @param {string} type 控件的类型
+     * @param {Obejct=} options 创建控件时的选项
+     * @return {fcui.Control}
+     * @proceted
+     */
+    overrides.create = function (type, options) {
+        options = options || {};
+        if (!options.viewContext) {
+            options.viewContext = this.viewContext;
+        }
+        return require('esui').create(type, options);
+    };
+
+    /**
+     * 显示一条提示信息
+     *
+     * @param {string | Object} content 提示的内容或完整的配置项
+     * @param {string=} title 提示框的标题，如`content`提供配置项则无此参数
+     * @return {esui/Dialog}
+     * @protected
+     */
+    overrides.alert = function (content, title) {
+        var options = typeof content === 'string'
+            ? {title: title || document.title, content: content}
+            : _.clone(content);
+        if (!options.viewContext) {
+            options.viewContext = this.viewContext;
+        }
+
+        var Dialog = require('esui/Dialog');
+        return Dialog.alert(options);
+    };
+
+    /**
+     * 显示一条确认信息
+     *
+     * @param {string | Object} content 提示的内容或完整的配置项
+     * @param {string=} title 提示框的标题，如`content`提供配置项则无此参数
+     * @return {esui/Dialog}
+     * @protected
+     */
+    overrides.confirm = function (content, title) {
+        var options = typeof content === 'string'
+            ? {title: title || document.title, content: content}
+            : _.clone(content);
+        if (!options.viewContext) {
+            options.viewContext = this.viewContext;
+        }
+
+        var Dialog = require('esui/Dialog');
+        return Dialog.confirm(options);
+    };
+
+    /*
+     * 声明控件的事件。该属性有2种方式：
+     *
+     * - 以`id:eventName`为键，以处理函数为值。
+     * - 以`id`为键，值为一个对象，对象中以`eventName`为键，处理函数为值。
+     *
+     * 在此处声明的事件，运行时的`this`对象均是`View`实例，而非控件的实例。
+     *
+     * 同时，在运行期，`UIView`会克隆该属性，将其中所有的处理函数都进行一次`bind`，
+     * 将`this`指向自身，因此运行时的`uiEvents`与类声明时的不会相同。
+     *
+     * 如果需要解除某个事件的绑定，可以使用`.on('type', this.uiEvents.xxx)`进行。
+     *
+     * @type {Object}
+     * @public
+     */
+    overrides.uiEvents = null;
+
+    /*
+     * 获取当前视图关联的控件事件声明。参考`uiEvents`属性
+     *
+     * @return {Object}
+     * @public
+     */
+    overrides.getUIEvents = function () {
+        return this.uiEvents || {};
+    };
+
+    /**
+     * 声明控件的额外属性。
+     *
+     * 这个属性以控件的id为键，以一个对象为值。对象表示要额外附加到控件上的属性。
+     * 当控件实例化时，会把DOM中声明的属性与此处声明的合并在一起，此处声明的为优先。
+     *
+     * @type {Object}
+     * @public
+     */
+    overrides.uiProperties = null;
+
+    /**
+     * 声明当前视图关联的控件的额外属性，参考`uiProperties`属性
+     *
+     * @return {Object}
+     */
+    overrides.getUIProperties = function () {
+        return this.uiProperties;
+    };
 
     /**
      * 给指定的控件绑定事件
@@ -127,6 +303,69 @@ define(function (require) {
     };
 
     /**
+     * 创建当前`UIView`使用的`ViewContext`对象
+     *
+     * @return {ViewContext}
+     * @public
+     */
+    overrides.createViewContext = function () {
+        var ViewContext = require('esui/ViewContext');
+        var name = this.name;
+
+        return new ViewContext(name || null);
+    };
+
+    /**
+     * 当容器渲染完毕后触发，用于控制元素可见性及绑定事件等DOM操作
+     *
+     * @override
+     * @protected
+     */
+    overrides.enterDocument = function () {
+        this.viewContext = this.createViewContext();
+
+        var container = this.getContainerElement();
+        var options = {
+            viewContext: this.viewContext,
+            properties: this.getUIProperties(),
+            valueReplacer: _.bind(this.replaceValue, this)
+        };
+
+        var error;
+        try {
+            require('esui').init(container, options);
+        }
+        catch (ex) {
+            error = new Error(
+                'ESUI initialization error on view '
+                + 'because: ' + ex.message
+            );
+            error.actualError = ex;
+            throw error;
+        }
+
+        try {
+            require('fc-component-ria').init(container, {
+                // templateData: this.getTemplateData(),
+                model: this.model,
+                viewContext: this.viewContext
+            });
+        }
+        catch (ex) {
+            error = new Error(
+                'Component initialization error on view '
+                + 'because: ' + ex.message
+            );
+            error.actualError = ex;
+            throw error;
+        }
+
+        this.bindEvents();
+
+        this.customDocument();
+    };
+
+    /**
      * 获取要去渲染的数据，但是这里做一个扩充处理
      * 可以使用自定义的replacer来进行展现替换，不改变model的东西
      * @return {Object} 一个提供了get方法的数据获取器
@@ -162,6 +401,20 @@ define(function (require) {
      */
     overrides.customDocument = function () {};
 
-    var BaseView = fc.oo.derive(require('ef/UIView'), overrides);
+    /**
+     * 销毁当前视图
+     *
+     * @override
+     * @protected
+     */
+    overrides.dispose = function () {
+        if (this.viewContext) {
+            this.viewContext.dispose();
+            this.viewContext = null;
+        }
+        this.$super(arguments);
+    };
+
+    var BaseView = fc.oo.derive(require('er/View'), overrides);
     return BaseView;
 });

@@ -25,11 +25,13 @@ define(function (require) {
      * 初始化交互
      */
     overrides.initBehavior = function () {
-        this.$super(arguments);
         this.view.on('search', function (e) {
             this.redirect(this.model.resolveQuery(e.data));
         }, this);
+        this.customBehavior();
     };
+
+    overrides.customBehavior = _.noop;
 
     function waitExecute(method, args, thisObject) {
         var waiting = method.apply(thisObject, args)

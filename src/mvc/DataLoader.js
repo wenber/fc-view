@@ -136,7 +136,7 @@ define(
          *
          * @private
          * @method DataLoader#.reportLoadResult
-         *
+         * @param {DataLoadResult[]} results 结果集存储
          * @return {DataLoadResult[]} 如果所有数据加载成功，返回所有加载结果
          * @throws {DataLoadResult[]} 如果有任何一个或以上的数据加载未成功，则抛出所有加载结果
          */
@@ -145,20 +145,20 @@ define(
             if (isSuccess) {
                 return results;
             }
-            else {
-                throw results;
-            }
+
+            throw results;
         };
 
         /**
          * 处理数据加载错误
+         * 正常返回表示错误已经处理，返回值作为数据加到`store`中
+         * 抛出异常则认为错误未处理，将异常作为错误继续传递
          *
          * @protected
          * @method DataLoader#.handleError
          *
          * @param {meta.DataLoadResult} error 错误信息，其中{@link meta.DataLoadResult#.success|success属性}一定为`false`
          * @param {meta.DataLoaderItem} item 加载的配置项
-         * @return {*} 正常返回表示错误已经处理，返回值作为数据加到`store`中，抛出异常则认为错误未处理，将异常作为错误继续传递
          */
         exports.handleError = function (error, item) {
             throw error.error;
@@ -254,7 +254,7 @@ define(
 
             // 是函数的话，函数即获取数据的函数，包装为数据获取配置项
             if (typeof config === 'function') {
-                var options = { retrieve: config, dump: true };
+                var options = {retrieve: config, dump: true};
                 return this.loadSingleItem(options).then(wrapSingleResultToArray);
             }
 
@@ -327,10 +327,10 @@ define(
             function loadUnit(unit, name) {
                 // 如果直接表达获取数据的内容，需要加上对应的属性名。其它情况下（值为嵌套的数组或对象），属性名将没有意义
                 if (typeof unit === 'function') {
-                    unit = { retrieve: unit, name: name };
+                    unit = {retrieve: unit, name: name};
                 }
                 else if (typeof unit.retrieve === 'function') {
-                    unit = u.extend({ name: name }, unit);
+                    unit = u.extend({name: name}, unit);
                 }
 
                 return this.loadByConfig(unit);

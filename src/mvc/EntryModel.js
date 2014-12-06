@@ -1,5 +1,5 @@
 /**
- * @file
+ * @file EntryModel 入口级别基础类
  *
  * @author Leo Wang(wangkemiao@baidu.com)
  */

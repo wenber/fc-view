@@ -21,10 +21,10 @@
         "loaderUrl": "http://s1.bdstatic.com/r/www/cache/ecom/esl/1-8-6/esl.js",
         "dependencies": {
             "er": "~3.1.0-beta.5",
-            "ef": "~3.1.0-beta.2",
             "emc": "~1.0.0",
             "fc-core": "0.0.1-alpha.2",
-            "fcui": "~0.0.1-alpha.4"
+            "fcui": "~0.0.1-alpha.4",
+            "fc-component-ria": "~0.0.1-alpha.1"
         }
     }
 }

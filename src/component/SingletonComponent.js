@@ -14,7 +14,16 @@ define(function (require) {
 
     var overrides = {};
 
-    overrides.show = function () {
+    /**
+     * 展现，单例可以在展现时覆盖配置
+     * @param {Object} options 配置
+     * @param {ViewContext} options.viewContext ui环境
+     * @param {BaseModel} options.model 数据Model
+     * @param {HtmlElement | string} container 容器
+     * @param {string} template 模板内容
+     */
+    overrides.show = function (options) {
+        this.initOptions(options);
         this.$super(arguments);
         // 并且开始监听这时候开始所有注册的事件
         // 如果有未清理的会清理掉
