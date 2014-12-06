@@ -11,7 +11,7 @@ define(function (require) {
      * @module view
      */
     var view = {
-        version: '0.0.1-alpha.6'
+        version: '0.0.1-alpha.7'
     };
     
     // 在此直接屏蔽掉er.View的dispose，它会让container内容清空
