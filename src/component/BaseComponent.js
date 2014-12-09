@@ -19,6 +19,7 @@ define(function (require) {
     require('fcui/Panel');
     require('fcui/Dialog');
 
+
     /**
      * 判断是否支持html5
      * @return {boolean}
@@ -108,24 +109,37 @@ define(function (require) {
      * @param {Object=} options.dialogOptions 对话框模式的配置
      */
     overrides.initOptions = function (options) {
-        var me = this;
         options = options || {};
-        me.viewContext = options.viewContext;
-        me.model = options.model;  // 意味传入了model，此时model为共享
-        if (me.model) {
+
+        // kuanghongrui
+        // 以下需要对空进行判断，
+        // 要不然第一次初始化参数后，再次执行该方法时，将会被覆盖。
+        if (options.viewContext) {
+            this.viewContext = options.viewContext;
+        }
+        if (options.model) {  // 意味传入了model，此时model为共享
+            this.model = options.model;
+        }
+        if (options.container) {
+            this.container = options.container;
+        }
+        if (options.template) {
+            this.template = options.template;
+        }
+
+        if (this.model) {
             // 如果直接传入了Model，不再请求
-            me.needToLoad = false;
+            this.needToLoad = false;
         }
         else {
-            me.needToLoad = true;
+            this.needToLoad = true;
         }
-        me.container = options.container;
-        me.template = options.template;
-        me.args = options.args;
-        me.dialogOptions = _.extend(
-            me.dialogOptions || {}, options.dialogOptions
+
+        this.args = options.args || this.args;
+        this.dialogOptions = _.extend(
+            this.dialogOptions || {}, options.dialogOptions
         );
-        me.dialogOptions.closeOnHide = true;  // 强制隐藏关闭（销毁）
+        this.dialogOptions.closeOnHide = true;  // 强制隐藏关闭（销毁）
     };
 
     /**
