@@ -19,7 +19,6 @@ define(function (require) {
     require('fcui/Panel');
     require('fcui/Dialog');
 
-
     /**
      * 判断是否支持html5
      * @return {boolean}
@@ -54,7 +53,6 @@ define(function (require) {
      * BaseComponent#repainted 重绘完成
      * BaseComponent#disposed 销毁完成
      * BaseComponent#showed
-     * BaseComponent#hided
      * BaseComponent#closed 界面关闭 之后会自动触发销毁
      * BaseComponent#loading 标记为加载中，仅在Model为异步时或者子Action模式时触发
      * BaseComponent#loaded 标记为加载完成，仅在Model为异步时或者子Action模式时触发
@@ -104,16 +102,30 @@ define(function (require) {
      * @param {Object} options 配置
      * @param {ViewContext} options.viewContext ui环境
      * @param {BaseModel} options.model 数据Model
-     * @param {HtmlElement | string} container 容器
-     * @param {string} template 模板内容
+     * @param {Object=} options.args 额外的数据，可用于Model初始化使用
+     * @param {HtmlElement | string} options.container 容器
+     * @param {string} options.template 模板内容
+     * @param {Object=} options.dialogOptions 对话框模式的配置
      */
     overrides.initOptions = function (options) {
+        var me = this;
         options = options || {};
-        this.viewContext = options.viewContext;
-        // this.templateData = options.templateData;
-        this.model = options.model;
-        this.container = options.container;
-        this.template = options.template;
+        me.viewContext = options.viewContext;
+        me.model = options.model;  // 意味传入了model，此时model为共享
+        if (me.model) {
+            // 如果直接传入了Model，不再请求
+            me.needToLoad = false;
+        }
+        else {
+            me.needToLoad = true;
+        }
+        me.container = options.container;
+        me.template = options.template;
+        me.args = options.args;
+        me.dialogOptions = _.extend(
+            me.dialogOptions || {}, options.dialogOptions
+        );
+        me.dialogOptions.closeOnHide = true;  // 强制隐藏关闭（销毁）
     };
 
     /**
@@ -208,10 +220,10 @@ define(function (require) {
             if (this.modelType) {
                 // fecs……
                 var ModelType = this.modelType;
-                this.model = new ModelType(this.templateData);
+                this.model = new ModelType(this.args);
             }
             else {
-                this.model = new BaseModel(this.templateData);
+                this.model = new BaseModel(this.args);
             }
         }
         else if (!(this.model instanceof BaseModel)) {
@@ -373,8 +385,7 @@ define(function (require) {
             me.control = fcui.create(
                 'Dialog',
                 _.deepExtend(defaultOpts, me.dialogOptions, {
-                    main: me.container,
-                    closeOnHide: false  // 强制隐藏不关闭（即不销毁）
+                    main: me.container
                 })
             );
 
@@ -504,31 +515,71 @@ define(function (require) {
             content: loadingRenderer(this.getTemplatedData())
         });
 
-        return model.load()
+        var state = this.needToLoad ? model.load() : Promise.resolve(model);
+
+        return state
             .then(_.bind(this.prepare, this))
             .then(_.bind(this.finishRender, this))
             .catch(_.bind(this.handleError, this));
     };
 
+    overrides.components = {};
+
+    /**
+     * 根据id获取当前视图下的Component
+     * @protected
+     *
+     * @param {string} id 控件的id
+     * @return {?fcui.Control} 对应的控件
+     */
+    overrides.getComponent = function (id) {
+        return this.components[id];
+    };
+
     overrides.finishRender = function () {
-        this.fire('loaded');
-        var renderer = this.getRenderer();
+        var me = this;
+        me.fire('loaded');
+        var renderer = me.getRenderer();
 
         if (renderer) {
-            this.control.setProperties({
-                content: renderer(this.getTemplatedData())
+            me.control.setProperties({
+                content: renderer(me.getTemplatedData())
             });
-        }
 
-        // 请注意，生命周期的改变会自动fire同名事件
-        this.lifeStage.changeTo(LifeStage.RENDERED);
+            // 继续component的处理
+            try {
+                this.components = {};
+                return require('fc-component-ria').init(me.container, {
+                    model: me.model,
+                    viewContext: me.viewContext,
+                    components: me.components
+                }).then(function () {
+                    // 请注意，生命周期的改变会自动fire同名事件
+                    me.lifeStage.changeTo(LifeStage.RENDERED);
+                });
+            }
+            catch (ex) {
+                var error = new Error(
+                    'Component initialization error on Component '
+                    + 'because: ' + ex.message
+                );
+                error.actualError = ex;
+                throw error;
+            }
+        }
     };
 
     overrides.repaint = function () {
+
         var renderer = this.getRenderer();
         if (renderer) {
             this.control.setContent(renderer(this.getTemplatedData()));
         }
+
+        this.control.repaint();
+
+        // 环境内的ui被重置，所以要重新绑定事件
+        this.initUIEvents();
 
         // 请注意，生命周期的改变会自动fire同名事件
         this.lifeStage.changeTo(LifeStage.REPAINTED);
@@ -636,6 +687,11 @@ define(function (require) {
         }
     };
 
+    overrides.refresh = function () {
+        // 现在先为repaint罢
+        this.enter();
+    };
+
     overrides.show = function () {
         var me = this;
 
@@ -645,8 +701,29 @@ define(function (require) {
     };
 
     overrides.hide = function () {
-        this.control.hide();
-        this.fire('hided');
+        // 默认销毁
+        this.close();
+        // this.fire('hided');
+    };
+
+    overrides.close = function () {
+        this.dispose();
+    };
+
+    overrides.dispose = function () {
+        this.model = null;
+        if (this.components) {
+            for (var k in this.components) {
+                if (this.components.hasOwnProperty(k)) {
+                    this.components[k].dispose();
+                }
+            }
+        }
+        if (this.viewContext) {
+            this.viewContext.dispose();
+        }
+        this.components = null;
+        this.viewContext = null;
     };
 
     var BaseComponent = fc.oo.derive(EventTarget, overrides);

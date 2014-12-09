@@ -14,6 +14,11 @@ define(function (require) {
 
     var overrides = {};
 
+    overrides.initOptions = function () {
+        this.$super(arguments);
+        this.dialogOptions.closeOnHide = false;  // 强制隐藏不关闭（不销毁）
+    };
+
     /**
      * 展现，单例可以在展现时覆盖配置
      * @param {Object} options 配置
@@ -31,7 +36,7 @@ define(function (require) {
     };
 
     overrides.hide = function () {
-        this.$super(arguments);
+        this.control.hide();
         // 并且清除本次展现期间注册的事件
         clearPostEvent.call(this);
     };

@@ -315,6 +315,19 @@ define(function (require) {
         return new ViewContext(name || null);
     };
 
+    overrides.components = {};
+
+    /**
+     * 根据id获取当前视图下的Component
+     * @protected
+     *
+     * @param {string} id 控件的id
+     * @return {?fcui.Control} 对应的控件
+     */
+    overrides.getComponent = function (id) {
+        return this.components[id];
+    };
+
     /**
      * 当容器渲染完毕后触发，用于控制元素可见性及绑定事件等DOM操作
      *
@@ -348,7 +361,8 @@ define(function (require) {
             require('fc-component-ria').init(container, {
                 // templateData: this.getTemplateData(),
                 model: this.model,
-                viewContext: this.viewContext
+                viewContext: this.viewContext,
+                components: this.components
             });
         }
         catch (ex) {
@@ -411,6 +425,12 @@ define(function (require) {
         if (this.viewContext) {
             this.viewContext.dispose();
             this.viewContext = null;
+        }
+        if (this.components) {
+            _.each(this.components, function (item) {
+                item.dispose();
+            });
+            this.components = null;
         }
         this.$super(arguments);
     };
