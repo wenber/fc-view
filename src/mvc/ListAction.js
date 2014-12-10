@@ -136,6 +136,7 @@ define(function (require) {
                         listTable.updateRowAt(row, newData);
                     }
                 });
+                return response;
             }, function () {
                 clearRowLoading(listTable);
             });
@@ -197,6 +198,7 @@ define(function (require) {
                 require('common/messager').notify(
                     '修改完成', 1000
                 );
+                return response;
             }, function () {
                 clearRowLoading(listTable);
             });
