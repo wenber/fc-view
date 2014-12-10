@@ -37,9 +37,16 @@ define(function (require) {
      * @param {Object} context 初始化的数据
      */
     overrides.constructor = function (context) {
-        this.$super(arguments);
+        var me = this;
+        me.$super(arguments);
+
+        // 配置dataLoaderSet
+        _.each(me.dataLoaderSet, function (item) {
+            item.setStore(me);
+        });
+
         // 初始化函数，用于在无法修改构造函数的情况下手动使用
-        this.initialize();
+        me.initialize();
     };
 
     /**
@@ -149,6 +156,10 @@ define(function (require) {
             dataLoader.dispose();
             dataLoader = null;
         }
+        // 配置dataLoaderSet
+        _.each(this.dataLoaderSet, function (item) {
+            item.setStore(null);
+        });
     };
 
     /**

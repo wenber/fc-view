@@ -508,11 +508,34 @@ define(function (require) {
         }
 
         return state.then(function () {
+            // 继续component的处理
+            try {
+                this.components = {};
+                return require('fc-component-ria').init(me.container, {
+                    model: me.model,
+                    viewContext: me.viewContext,
+                    components: me.components
+                });
+            }
+            catch (ex) {
+                var error = new Error(
+                    'Component initialization error on Component '
+                    + 'because: ' + ex.message
+                );
+                error.actualError = ex;
+                throw error;
+            }
+        }).then(function () {
+            // 环境内的ui被重置，所以要重新绑定事件
+            me.initUIEvents();
+
             if (me.lifeStage.is(LifeStage.RENDERED)) {
-                me.initUIEvents();
                 // 供外部来处理交互
                 me.initBehavior();
             }
+
+            // trigger一次resize
+            // me.control.resize && me.control.resize();
         });
     };
 
@@ -559,44 +582,24 @@ define(function (require) {
             me.control.setProperties({
                 content: renderer(me.getTemplatedData())
             });
-
-            // 继续component的处理
-            try {
-                this.components = {};
-                return require('fc-component-ria').init(me.container, {
-                    model: me.model,
-                    viewContext: me.viewContext,
-                    components: me.components
-                }).then(function () {
-                    // 请注意，生命周期的改变会自动fire同名事件
-                    me.lifeStage.changeTo(LifeStage.RENDERED);
-                });
-            }
-            catch (ex) {
-                var error = new Error(
-                    'Component initialization error on Component '
-                    + 'because: ' + ex.message
-                );
-                error.actualError = ex;
-                throw error;
-            }
         }
+
+        // 请注意，生命周期的改变会自动fire同名事件
+        me.lifeStage.changeTo(LifeStage.RENDERED);
     };
 
     overrides.repaint = function () {
 
-        var renderer = this.getRenderer();
+        var me = this;
+        var renderer = me.getRenderer();
         if (renderer) {
-            this.control.setContent(renderer(this.getTemplatedData()));
+            me.control.setContent(renderer(me.getTemplatedData()));
         }
 
-        this.control.repaint();
-
-        // 环境内的ui被重置，所以要重新绑定事件
-        this.initUIEvents();
+        me.control.repaint();
 
         // 请注意，生命周期的改变会自动fire同名事件
-        this.lifeStage.changeTo(LifeStage.REPAINTED);
+        me.lifeStage.changeTo(LifeStage.REPAINTED);
 
         return Promise.resolve();
     };

@@ -24,11 +24,6 @@ define(function (require) {
             .value();
         // call super
         me.$super([newContext]);
-
-        // 配置dataLoaderSet
-        _.each(me.dataLoaderSet, function (item) {
-            item.setStore(me);
-        });
     };
 
     overrides.resolveQuery = function (data) {
@@ -76,18 +71,6 @@ define(function (require) {
      */
     overrides.filterQuery = function(query) {
         return query;
-    };
-
-    /**
-     * 销毁处理
-     */
-    overrides.dispose = function () {
-        var me = this;
-        // 配置dataLoaderSet
-        _.each(me.dataLoaderSet, function (item) {
-            item.setStore(null);
-        });
-        me.$super(arguments);
     };
 
     return fc.oo.derive(require('./BaseModel'), overrides);
