@@ -9,6 +9,7 @@ define(function (require) {
 
     var _ = require('underscore');
     var fc = require('fc-core');
+    var Promise = require('fc-core/Promise');
 
     var viewUtil = require('common/viewUtil');
 
@@ -136,9 +137,10 @@ define(function (require) {
                         listTable.updateRowAt(row, newData);
                     }
                 });
-                return response;
-            }, function () {
+                return Promise.resolve(response);
+            }, function (response) {
                 clearRowLoading(listTable);
+                return Promise.reject(response);
             });
     }
 
@@ -198,9 +200,10 @@ define(function (require) {
                 require('common/messager').notify(
                     '修改完成', 1000
                 );
-                return response;
-            }, function () {
+                return Promise.resolve(response);
+            }, function (response) {
                 clearRowLoading(listTable);
+                return Promise.reject(response);
             });
 
     }
