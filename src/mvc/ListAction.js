@@ -106,12 +106,14 @@ define(function (require) {
 
         var listTable = me.view.get('list-table');
         // 展现行内loading，但是取决于col是否存在……
-        if (!col) {
-            // 使用行刷新模式
-            showRowLoading(listTable, [row]);
-        }
-        else {
-            showCellLoading(listTable, [row], [col]);
+        if (!extraRowData || extraRowData._executedSource !== 'component') {
+            if (!col) {
+                // 使用行刷新模式
+                showRowLoading(listTable, [row]);
+            }
+            else {
+                showCellLoading(listTable, [row], [col]);
+            }
         }
         return waitExecute(method, args, me)
             .then(function (response) {
@@ -134,6 +136,8 @@ define(function (require) {
                         listTable.updateRowAt(row, newData);
                     }
                 });
+            }, function () {
+                clearRowLoading(listTable);
             });
     }
 
@@ -157,10 +161,12 @@ define(function (require) {
 
         var listTable = this.view.get('list-table');
 
-        // 这时候只有row了，没有col
-        // 先不处理loading了，但是可以先禁用或者做些展现处理
-        // like this
-        showRowLoading(listTable, row);
+        if (!extraRowData || extraRowData._executedSource !== 'component') {
+            // 这时候只有row了，没有col
+            // 先不处理loading了，但是可以先禁用或者做些展现处理
+            // like this
+            showRowLoading(listTable, row);
+        }
 
         return waitExecute(method, args, this)
             .then(function (response) {
@@ -187,10 +193,12 @@ define(function (require) {
                 // 刷新表格
                 clearRowLoading(listTable);
                 listTable.setDatasource(updatedDatasource);
-                listTable.setRowSelected(row, true);
+                listTable.set('selectedIndex', row);
                 require('common/messager').notify(
                     '修改完成', 1000
                 );
+            }, function () {
+                clearRowLoading(listTable);
             });
 
     }
