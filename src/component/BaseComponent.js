@@ -13,6 +13,7 @@ define(function (require) {
     var EventTarget = require('fc-core/EventTarget');
     var Promise = require('fc-core/Promise');
     var ViewContext = require('fcui/ViewContext');
+    var ComponentContext = require('./ComponentContext');
     var LifeStage = require('./LifeStage');
     var BaseModel = require('../mvc/BaseModel');
 
@@ -46,7 +47,7 @@ define(function (require) {
      * @extends fc.EventTarget
      *
      * 生命周期：using LifeStage
-     * NEW -> INITED -> RENDERED -> REPAINTED -> DISPOSE
+     * NEW -> INITED -> RENDERED -> REPAINTED -> DISPOSED
      *
      * 对外事件暴露
      * BaseComponent#inited 初始化完成
@@ -79,17 +80,26 @@ define(function (require) {
      * @constructor
      * @param {Object} options 配置
      * @param {ViewContext} options.viewContext ui环境
+     * @param {ComponentContext} options.componentContext 组件环境
      * @param {BaseModel} options.model 数据Model
      * @param {HtmlElement | string} container 容器
      * @param {string} template 模板内容
      */
     overrides.constructor = function (options) {
         this.guid = fc.util.guid();
-        this.name += '-' + this.guid;
         this.lifeStage = new LifeStage(this);
 
         // 处理options
         this.initOptions(options);
+
+        if (!this.name) {
+            this.name = 'component-' + this.guid;
+        }
+
+        // 如果依然没有ComponentContext，则初始化一个
+        if (!this.componentContext) {
+            this.setComponentContext(new ComponentContext(this.name));
+        }
 
         // 提供手动初始化
         this.initialize();
@@ -102,6 +112,7 @@ define(function (require) {
      * 处理配置，转为类的属性
      * @param {Object} options 配置
      * @param {ViewContext} options.viewContext ui环境
+     * @param {ComponentContext} options.componentContext 组件环境
      * @param {BaseModel} options.model 数据Model
      * @param {Object=} options.args 额外的数据，可用于Model初始化使用
      * @param {HtmlElement | string} options.container 容器
@@ -117,6 +128,15 @@ define(function (require) {
         if (options.viewContext) {
             this.viewContext = options.viewContext;
         }
+
+        if (options.name) {
+            this.name = options.name;
+        }
+
+        if (options.componentContext) {
+            this.setComponentContext(options.componentContext);
+        }
+
         if (options.model) {  // 意味传入了model，此时model为共享
             this.model = options.model;
         }
@@ -141,12 +161,6 @@ define(function (require) {
         );
         this.dialogOptions.closeOnHide = true;  // 强制隐藏关闭（销毁）
     };
-
-    /**
-     * 基础类名
-     * @type {string}
-     */
-    overrides.name = 'component';
 
     /**
      * 手动初始化方法
@@ -510,11 +524,10 @@ define(function (require) {
         return state.then(function () {
             // 继续component的处理
             try {
-                this.components = {};
                 return require('fc-component-ria').init(me.container, {
                     model: me.model,
                     viewContext: me.viewContext,
-                    components: me.components
+                    componentContext: me.componentContext
                 });
             }
             catch (ex) {
@@ -560,17 +573,41 @@ define(function (require) {
             .catch(_.bind(this.handleError, this));
     };
 
-    overrides.components = {};
+    overrides.setComponentContext = function (componentContext) {
+        // 为了避免程序流转，降低性能，以及死循环，做一次判断
+        var oldComponentContext = this.componentContext;
+        if (oldComponentContext === componentContext) {
+            return;
+        }
+
+        // 从老视图环境中清除
+        if (oldComponentContext) {
+            this.componentContext = null;
+            oldComponentContext.remove(this);
+        }
+
+        // 注册到新视图环境
+        this.componentContext = componentContext;
+        componentContext && componentContext.add(this);
+
+        // 在主元素上加个属性，以便找到`ComponentContext`
+        if (this.componentContext && this.lifeStage.is(LifeStage.RENDERED)) {
+            this.container.setAttribute(
+                'component-context',
+                this.componentContext.id
+            );
+        }
+    };
 
     /**
      * 根据id获取当前视图下的Component
      * @protected
      *
-     * @param {string} id 控件的id
-     * @return {?fcui.Control} 对应的控件
+     * @param {string} name 控件的name
+     * @return {?Component} 对应的控件
      */
-    overrides.getComponent = function (id) {
-        return this.components[id];
+    overrides.getComponent = function (name) {
+        return this.componentContext.get(name);
     };
 
     overrides.finishRender = function () {
@@ -728,19 +765,24 @@ define(function (require) {
     };
 
     overrides.dispose = function () {
-        this.model = null;
-        if (this.components) {
-            for (var k in this.components) {
-                if (this.components.hasOwnProperty(k)) {
-                    this.components[k].dispose();
-                }
-            }
+        if (this.lifeStage.is(LifeStage.DISPOSED)) {
+            return;
         }
         if (this.viewContext) {
             this.viewContext.dispose();
         }
-        this.components = null;
         this.viewContext = null;
+        if (this.componentContext) {
+            this.componentContext.remove(this);
+        }
+        this.componentContext = null;
+        if (this.model) {
+            this.model.dispose();
+        }
+        this.model = null;
+
+        this.destroyEvents();
+        this.lifeStage.changeTo(LifeStage.DISPOSED);
     };
 
     var BaseComponent = fc.oo.derive(EventTarget, overrides);
