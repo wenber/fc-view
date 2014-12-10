@@ -35,12 +35,7 @@ define(function (require) {
     overrides.customBehavior = _.noop;
 
     function waitExecute(method, args, thisObject) {
-        var waiting = method.apply(thisObject, args)
-            // .then(function (response) {
-            //     // 返回新数据
-            //     return response.data;
-            // })
-            .catch(fc.util.processError);
+        var waiting = method.apply(thisObject, args);
 
         return waiting;
     }
