@@ -9,6 +9,7 @@ define(function (require) {
 
     var _ = require('underscore');
     var fc = require('fc-core');
+    var Promise = require('fc-core/Promise');
 
     var viewUtil = require('common/viewUtil');
 
@@ -34,12 +35,7 @@ define(function (require) {
     overrides.customBehavior = _.noop;
 
     function waitExecute(method, args, thisObject) {
-        var waiting = method.apply(thisObject, args)
-            // .then(function (response) {
-            //     // 返回新数据
-            //     return response.data;
-            // })
-            .catch(fc.util.processError);
+        var waiting = method.apply(thisObject, args);
 
         return waiting;
     }
@@ -136,8 +132,10 @@ define(function (require) {
                         listTable.updateRowAt(row, newData);
                     }
                 });
-            }, function () {
+                return Promise.resolve(response);
+            }, function (response) {
                 clearRowLoading(listTable);
+                return Promise.reject(response);
             });
     }
 
@@ -197,8 +195,10 @@ define(function (require) {
                 require('common/messager').notify(
                     '修改完成', 1000
                 );
-            }, function () {
+                return Promise.resolve(response);
+            }, function (response) {
                 clearRowLoading(listTable);
+                return Promise.reject(response);
             });
 
     }
