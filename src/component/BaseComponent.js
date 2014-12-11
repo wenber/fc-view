@@ -743,6 +743,16 @@ define(function (require) {
         this.viewContext = null;
     };
 
+    overrides.find = function (query) {
+        var el = this.container || this.control.main;
+        return el.querySelector(query);
+    };
+
+    overrides.findAll = function (query) {
+        var el = this.container || this.control.main;
+        return el.querySelectorAll(query);
+    };
+
     var BaseComponent = fc.oo.derive(EventTarget, overrides);
 
     return BaseComponent;
