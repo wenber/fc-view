@@ -82,7 +82,8 @@ define(function (require) {
      */
     overrides.getNewValue = function(response) {
         if (response && response.data) {
-            return response.data;
+            var data = response.data;
+            return _.isEmpty(data) ? null : data;
         }
         return null;
     };
