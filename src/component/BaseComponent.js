@@ -529,16 +529,12 @@ define(function (require) {
         return state.then(function () {
             // 继续component的处理
             try {
-                return require('fc-component-ria').init(me.container, {
-                    model: me.model,
-                    viewContext: me.viewContext,
-                    componentContext: me.componentContext
-                });
+                return me.initChildComponents(me.container);
             }
             catch (ex) {
                 var error = new Error(
-                    'Component initialization error on Component '
-                    + 'because: ' + ex.message
+                    'Component initialization error on Component ' + me.name
+                    + ' because: ' + ex.message
                 );
                 error.actualError = ex;
                 throw error;
@@ -744,6 +740,14 @@ define(function (require) {
                 }
             }
         }
+    };
+
+    overrides.initChildComponents = function (container) {
+        require('fc-component-ria').init(container, {
+            viewContext: this.viewContext,
+            componentContext: this.componentContext,
+            model: this.getModel()
+        });
     };
 
     overrides.refresh = function () {
