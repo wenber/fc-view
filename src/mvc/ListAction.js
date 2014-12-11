@@ -76,6 +76,28 @@ define(function (require) {
     }
 
     /**
+     * 获取新数据。
+     * @param {Object} response
+     * @return {Object}
+     */
+    overrides.getNewValue = function(response) {
+        if (response && response.data) {
+            return response.data;
+        }
+        return null;
+    };
+
+    /**
+     * 获取旧数据。
+     * @param {Object} response
+     * @param {Object} datasource
+     * @return {Object}
+     */
+    overrides.getOldValue = function(response, datasource) {
+        return null;
+    };
+
+    /**
      * 执行单个行内修改行为的命令
      * @param {Function} method 要执行的方法
      * @param {Object} e 事件的参数
@@ -120,6 +142,8 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
+                var oldValue = this.getOldValue(response, listTable.datasource);
+
                 // 行更新
                 clearRowLoading(listTable);
                 _.each(processedData, function (item, index) {
@@ -132,7 +156,10 @@ define(function (require) {
                         listTable.updateRowAt(row, newData);
                     }
                 });
-                return Promise.resolve(response);
+                return {
+                    newValue: this.getNewValue(response),
+                    oldValue: oldValue
+                };
             }, function (response) {
                 clearRowLoading(listTable);
                 return Promise.reject(response);
@@ -175,6 +202,8 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
+                var oldValue = this.getOldValue(response, listTable.datasource);
+
                 var updatedDatasource = _.map(
                     listTable.datasource,
                     function (item, index) {
@@ -195,7 +224,10 @@ define(function (require) {
                 require('common/messager').notify(
                     '修改完成', 1000
                 );
-                return Promise.resolve(response);
+                return {
+                    newValue: this.getNewValue(response),
+                    oldValue: oldValue
+                };
             }, function (response) {
                 clearRowLoading(listTable);
                 return Promise.reject(response);
@@ -232,6 +264,47 @@ define(function (require) {
         executing.then(_.bind(this.afterExecuteModifyCommand, this));
 
         return executing;
+    };
+
+    /**
+     * 执行某个组件内部的修改行为命令
+     * 区分单个和批量
+     * @param {BaseComponent} component 需要被执行的组件
+     * @param {Event} e 事件的参数
+     * @param {string} e.type 事件类型，例如pause
+     * @param {Object} e.data 事件附带数据
+     * @param {Object=} e.data.args 本次执行方法的参数
+     * @param {number|Array.<number>} e.data.row 表示所在行，如果是多个则为批量
+     * @param {number|Array.<number>=} e.data.col 表示所在列，会影响刷新模式
+     * @param {Object=} extraRowData 额外的参数，在执行成功后补充入saved事件的newData
+     * @return {Promise}
+     */
+    overrides.executeModifyComponent = function (component, e, extraRowData) {
+        var items = this.model.get('materialList').listData;
+        var rowIndexes = [].concat(e.data.row);
+        component.show({
+            model: _.extend({}, extraRowData, {
+                selectedItems: _.filter(items, function (item, index) {
+                    return _.contains(rowIndexes, index);
+                })
+            })
+        });
+        return this.executeModifyCommand(function () {
+            return new Promise(function (resolve, reject) {
+                var isSaved = false;
+                component.once('saved', function (e) {
+                    isSaved = true;
+                    resolve(e);
+                });
+                component.once('hide', function (e) {
+                    if (!isSaved) {
+                        reject();
+                    }
+                });
+            });
+        }, e, _.extend({}, extraRowData, {
+            _executedSource: 'component' // 执行源为component
+        }));
     };
 
     /**
