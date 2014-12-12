@@ -743,7 +743,7 @@ define(function (require) {
     };
 
     overrides.initChildComponents = function (container) {
-        require('fc-component-ria').init(container, {
+        return require('fc-component-ria').init(container, {
             viewContext: this.viewContext,
             componentContext: this.componentContext,
             model: this.getModel()
