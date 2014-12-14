@@ -284,7 +284,7 @@ define(function (require) {
         var items = this.model.get('materialList').listData;
         var rowIndexes = [].concat(e.data.row);
         component.show({
-            model: _.extend({}, extraRowData, {
+            args: _.extend({}, extraRowData, {
                 selectedItems: _.filter(items, function (item, index) {
                     return _.contains(rowIndexes, index);
                 })
