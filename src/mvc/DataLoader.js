@@ -423,7 +423,7 @@ define(
          * @method DataLoader#.dispose
          */
         exports.dispose = function () {
-            while (this.pendingWorkers.length) {
+            while (this.pendingWorkers && this.pendingWorkers.length) {
                 this.destroyPendingWorker(this.pendingWorkers[0]);
             }
 

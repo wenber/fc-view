@@ -86,15 +86,17 @@ define(function (require) {
      * @param {string} template 模板内容
      */
     overrides.constructor = function (options) {
-        this.guid = fc.util.guid();
+        this.guid = fc.util.uid();
         this.lifeStage = new LifeStage(this);
 
         // 处理options
         this.initOptions(options);
 
         if (!this.name) {
-            this.name = 'component-' + this.guid;
+            this.name = 'component-base';
         }
+
+        this.id = this.name + '-' + this.guid;
 
         // 如果依然没有ComponentContext，则初始化一个
         if (!this.componentContext) {
@@ -155,11 +157,14 @@ define(function (require) {
             this.needToLoad = true;
         }
 
-        this.args = options.args || this.args;
+        this.args = options.args || this.args || {};
         this.dialogOptions = _.extend(
             this.dialogOptions || {}, options.dialogOptions
         );
         this.dialogOptions.closeOnHide = true;  // 强制隐藏关闭（销毁）
+
+        // 缓存options
+        this._options = options;
     };
 
     /**
@@ -173,7 +178,7 @@ define(function (require) {
      */
     overrides.getViewContext = function () {
         if (!this.viewContext) {
-            this.viewContext = new ViewContext(this.name);
+            this.viewContext = new ViewContext(this.id);
         }
         return this.viewContext;
     };
@@ -394,7 +399,7 @@ define(function (require) {
 
         var me = this;
         var defaultOpts = {
-            id: me.name,
+            id: me.id,
             main: me.container,
             viewContext: viewContext,
             needFoot: true,
@@ -407,7 +412,7 @@ define(function (require) {
         if (!me.container) {
             // 创建容器元素
             me.container = document.createElement('div');
-            me.container.id = me.name;
+            me.container.id = me.id;
             document.body.appendChild(me.container);
             // 创建Dialog
             me.control = fcui.create(
@@ -524,16 +529,12 @@ define(function (require) {
         return state.then(function () {
             // 继续component的处理
             try {
-                return require('fc-component-ria').init(me.container, {
-                    model: me.model,
-                    viewContext: me.viewContext,
-                    componentContext: me.componentContext
-                });
+                return me.initChildComponents(me.container);
             }
             catch (ex) {
                 var error = new Error(
-                    'Component initialization error on Component '
-                    + 'because: ' + ex.message
+                    'Component initialization error on Component ' + me.name
+                    + ' because: ' + ex.message
                 );
                 error.actualError = ex;
                 throw error;
@@ -741,6 +742,14 @@ define(function (require) {
         }
     };
 
+    overrides.initChildComponents = function (container) {
+        return require('fc-component-ria').init(container, {
+            viewContext: this.viewContext,
+            componentContext: this.componentContext,
+            model: this.getModel()
+        });
+    };
+
     overrides.refresh = function () {
         // 现在先为repaint罢
         this.enter();
@@ -757,7 +766,6 @@ define(function (require) {
     overrides.hide = function () {
         // 默认销毁
         this.close();
-        // this.fire('hided');
     };
 
     overrides.close = function () {
@@ -772,6 +780,7 @@ define(function (require) {
             this.viewContext.dispose();
         }
         this.viewContext = null;
+        this.control.dispose;
         if (this.componentContext) {
             this.componentContext.remove(this);
         }
@@ -783,6 +792,16 @@ define(function (require) {
 
         this.destroyEvents();
         this.lifeStage.changeTo(LifeStage.DISPOSED);
+    };
+
+    overrides.find = function (query) {
+        var el = this.container || this.control.main;
+        return el.querySelector(query);
+    };
+
+    overrides.findAll = function (query) {
+        var el = this.container || this.control.main;
+        return el.querySelectorAll(query);
     };
 
     var BaseComponent = fc.oo.derive(EventTarget, overrides);

@@ -20,7 +20,10 @@ define(function (require) {
 
         // 如果已经有同名的，说明上次处理没有正确的dispose掉
         if (pool.hasOwnProperty(id)) {
-            throw new Error('the same id `' + id + '` ComponentContext exsited!');
+            // throw new Error('the same id `' + id + '` ComponentContext exsited!');
+            // 已经有了 不要再处理了
+            // dispose之
+            pool[id].dispose();
         }
 
         /**
