@@ -794,11 +794,21 @@ define(function (require) {
         this.lifeStage.changeTo(LifeStage.DISPOSED);
     };
 
+    /**
+     * 在当前component所属容器内，寻找符合给定query的DOM节点
+     * @param {string} query CSS query
+     * @return {HTMLElement} 找到的节点
+     */
     overrides.find = function (query) {
         var el = this.container || this.control.main;
         return el.querySelector(query);
     };
 
+    /**
+     * 在当前component所属容器内，寻找符合给定query的一组DOM节点
+     * @param {string} query CSS query
+     * @return {Array<HTMLElement>} 找到的节点
+     */
     overrides.findAll = function (query) {
         var el = this.container || this.control.main;
         return el.querySelectorAll(query);
