@@ -315,17 +315,28 @@ define(function (require) {
         return new ViewContext(name || null);
     };
 
-    overrides.components = {};
+    /**
+     * 创建当前`UIView`使用的`ViewContext`对象
+     *
+     * @return {ViewContext}
+     * @public
+     */
+    overrides.createComponentContext = function () {
+        var ComponentContext = require('../component/ComponentContext');
+        var name = this.name;
+
+        return new ComponentContext(name || null);
+    };
 
     /**
-     * 根据id获取当前视图下的Component
+     * 根据name获取当前视图下的Component
      * @protected
      *
-     * @param {string} id 控件的id
-     * @return {?fcui.Control} 对应的控件
+     * @param {string} name 控件的name
+     * @return {?Component} 对应的Component
      */
-    overrides.getComponent = function (id) {
-        return this.components[id];
+    overrides.getComponent = function (name) {
+        return this.componentContext.get(name);
     };
 
     /**
@@ -336,6 +347,7 @@ define(function (require) {
      */
     overrides.enterDocument = function () {
         this.viewContext = this.createViewContext();
+        this.componentContext = this.createComponentContext();
 
         var container = this.getContainerElement();
         var options = {
@@ -359,10 +371,9 @@ define(function (require) {
 
         try {
             require('fc-component-ria').init(container, {
-                // templateData: this.getTemplateData(),
                 model: this.model,
                 viewContext: this.viewContext,
-                components: this.components
+                componentContext: this.componentContext
             });
         }
         catch (ex) {
