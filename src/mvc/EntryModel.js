@@ -43,7 +43,7 @@ define(function (require) {
     };
 
     overrides.loadingData = {
-        loading: '<span class="view-loading">加载中...</span>'
+        loading: '<span class="view-loading">加载中，请稍候...</span>'
     };
 
     overrides.defaultArgs = {};

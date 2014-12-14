@@ -58,6 +58,12 @@ define(function (require) {
     overrides.initialize = _.noop;
 
     /**
+     * dataLoaderSet，不会被销毁，只会被解除store的锁定
+     * @type {Object}
+     */
+    overrides.dataLoaderSet = {};
+
+    /**
      * 加载数据，在完成数据处理后返回
      *
      * @method BaseModel#.load
@@ -71,6 +77,94 @@ define(function (require) {
             return loading.then(_.bind(this.forwardToPrepare, this));
         }
         return loading;
+    };
+
+    /**
+     * 获取值，因为emc的Model获取引用类型时是直接返回，可能导致意外修改，所以fix一下
+     *
+     * @method BaseModel#.get
+     *
+     * @param {string} name 属性名
+     * @return {*} `name`对应的值
+     *
+     * @throws {Error} 当前对象已经销毁
+     * @throws {Error} 未提供`name`参数
+     */
+    overrides.get = function () {
+        return _.deepClone(this.$super(arguments));
+    };
+
+    /**
+     * 设置值
+     *
+     * @method BaseModel#.set
+     *
+     * @param {string} name 属性名
+     * @param {*} value 对应的值
+     * @param {Object} [options] 相关选项
+     * @param {boolean} [options.silent=false] 如果该值为`true`则不触发{@link BaseModel#.event:change|change事件}
+     *
+     * @fires change
+     * @throws {Error} 当前对象已经销毁
+     * @throws {Error} 未提供`name`参数
+     * @throws {Error} 未提供`value`参数
+     */
+    overrides.set = function (name, value, options) {
+        if (!this.store) {
+            throw new Error('This model is disposed');
+        }
+
+        if (!name) {
+            throw new Error('Argument name is not provided');
+        }
+
+        if (arguments.length < 2) {
+            throw new Error('Argument value is not provided');
+        }
+
+        options = options || {};
+
+        var changeType = this.store.hasOwnProperty(name) ? 'change' : 'add';
+        var oldValue = _.deepClone(this.store[name]);
+        this.store[name] = value;
+
+        if (oldValue !== value && !options.silent) {
+            var event = {
+                name: name,
+                oldValue: oldValue,
+                newValue: value,
+                changeType: changeType
+            };
+            /**
+             * 属性值发生变化时触发
+             *
+             * @event BaseModel#.change
+             *
+             * @property {string} name 发生变化的属性的名称
+             * @property {string} changeType 变化的类型，取值为`"add"`、`"change"`或`"remove"`
+             * @property {*} oldValue 变化前的值
+             * @property {*} newValue 变化后的值
+             */
+            this.fire('change', event);
+            this.fire('change:' + name, event);
+        }
+    };
+
+    /**
+     * 提供一个更新的方法，主要是针对着PlainObject，行为是更新而不是替换
+     * 数组依然是替换
+     * @param {string} key 要更新的字段名称
+     * @param {*} toUpdate 要更新的数据
+     */
+    overrides.update = function (key, toUpdate) {
+        var origValue = this.get(key);
+        if (_.isObject(origValue)) {
+            _.deepExtend(origValue, toUpdate);
+            this.set(key, origValue);
+        }
+        else {
+            this.set(key, toUpdate);
+        }
     };
 
     /**
@@ -165,7 +259,7 @@ define(function (require) {
     /**
      * 获取关联数据加载器
      *
-     * @method Model#.getDataLoader
+     * @method BaseModel#.getDataLoader
      *
      * @return {DataLoader}
      * @protected
@@ -177,7 +271,7 @@ define(function (require) {
     /**
      * 设置关联的数据加载器
      *
-     * @method Model#.setDataLoader
+     * @method BaseModel#.setDataLoader
      *
      * @param {DataLoader} dataLoader 需要关联的数据加载器实例
      * @protected
@@ -185,6 +279,34 @@ define(function (require) {
     overrides.setDataLoader = function (dataLoader) {
         dataLoader.setStore(this);
         this.dataLoader = dataLoader;
+    };
+
+    /**
+     * 增加一个关联数据加载器
+     * @method BaseModel#.addDataLoader
+     * @param {string} name 需要关联的数据加载器实例的名字
+     * @param {DataLoader} dataLoader 需要关联的数据加载器实例
+     */
+    overrides.addDataLoader = function (name, dataLoader) {
+        if (this.dataLoaderSet[name]) {
+            // 先remove掉
+            this.removeDataLoader(name);
+        }
+        this.dataLoaderSet[name] = dataLoader;
+        dataLoader.setStore(this);
+    };
+
+    /**
+     * 删除一个关联数据加载器
+     * @method BaseModel#.addDataLoader
+     * @param {string} name 需要关联的数据加载器实例的名字
+     */
+    overrides.removeDataLoader = function (name) {
+        if (!this.dataLoaderSet[name]) {
+            return;
+        }
+        this.dataLoaderSet[name].setStore(null);
+        delete this.dataLoaderSet[name];
     };
 
     var BaseModel = fc.oo.derive(require('emc/Model'), overrides);

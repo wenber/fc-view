@@ -346,14 +346,15 @@ define(function (require) {
      * @protected
      */
     overrides.enterDocument = function () {
-        this.viewContext = this.createViewContext();
-        this.componentContext = this.createComponentContext();
+        var me = this;
+        me.viewContext = me.createViewContext();
+        me.componentContext = me.createComponentContext();
 
-        var container = this.getContainerElement();
+        var container = me.getContainerElement();
         var options = {
-            viewContext: this.viewContext,
-            properties: this.getUIProperties(),
-            valueReplacer: _.bind(this.replaceValue, this)
+            viewContext: me.viewContext,
+            properties: me.getUIProperties(),
+            valueReplacer: _.bind(me.replaceValue, me)
         };
 
         var error;
@@ -371,9 +372,12 @@ define(function (require) {
 
         try {
             require('fc-component-ria').init(container, {
-                model: this.model,
-                viewContext: this.viewContext,
-                componentContext: this.componentContext
+                model: me.model,
+                viewContext: me.viewContext,
+                componentContext: me.componentContext
+            }).then(function () {
+                me.bindEvents();
+                me.customDocument();
             });
         }
         catch (ex) {
@@ -384,10 +388,6 @@ define(function (require) {
             error.actualError = ex;
             throw error;
         }
-
-        this.bindEvents();
-
-        this.customDocument();
     };
 
     /**
@@ -425,6 +425,13 @@ define(function (require) {
      * 在view的初始化阶段暴露给开发者的自定义处理
      */
     overrides.customDocument = function () {};
+
+    /**
+     * 增加repaint作为render的别名
+     */
+    overrides.repaint = function () {
+        this.render();
+    };
 
     /**
      * 销毁当前视图
