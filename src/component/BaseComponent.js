@@ -15,6 +15,7 @@ define(function (require) {
     var ViewContext = require('fcui/ViewContext');
     var ComponentContext = require('./ComponentContext');
     var LifeStage = require('./LifeStage');
+    // 默认使用EntryModel
     var EntryModel = require('../mvc/EntryModel');
 
     require('fcui/Panel');
@@ -274,12 +275,7 @@ define(function (require) {
                 this.model = new EntryModel(this.args);
             }
         }
-        else if (!(this.model instanceof EntryModel)) {
-            this.model = new EntryModel(this.model);
-        }
-        else {
-            throw new Error('Sorry，当前限制Component的Model为EntryModel或其子类');
-        }
+
         return this.model;
     };
 
@@ -290,9 +286,6 @@ define(function (require) {
     overrides.getTemplatedData = function () {
 
         var model = this.getModel();
-        if (Promise.isPromise(model)) {
-            return {};
-        }
 
         var visit = function (propertyPath) {
             var path = propertyPath.replace(/\[(\d+)\]/g, '.$1').split('.');
