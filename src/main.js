@@ -4,7 +4,20 @@
  */
 
 define(function (require) {
-    var view = {};
+    'use strict';
+
+    var _ = require('underscore');
+
+    /**
+     * fc-view 模块
+     * @module view
+     */
+    var view = {
+        version: '0.0.1-alpha.12'
+    };
+
+    // 在此直接屏蔽掉er.View的dispose，它会让container内容清空
+    require('er/View').prototype.dispose = _.noop;
 
     return view;
 });
