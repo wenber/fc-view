@@ -155,15 +155,17 @@ define(function (require) {
      * 数组依然是替换
      * @param {string} key 要更新的字段名称
      * @param {*} toUpdate 要更新的数据
+     * @param {Object} [options] 相关选项
+     * @param {boolean} [options.silent=false] 如果该值为`true`则不触发{@link BaseModel#.event:change|change事件}
      */
-    overrides.update = function (key, toUpdate) {
+    overrides.update = function (key, toUpdate, options) {
         var origValue = this.get(key);
         if (_.isObject(origValue)) {
             _.deepExtend(origValue, toUpdate);
-            this.set(key, origValue);
+            this.set(key, origValue, options);
         }
         else {
-            this.set(key, toUpdate);
+            this.set(key, toUpdate, options);
         }
     };
 

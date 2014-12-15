@@ -86,8 +86,8 @@ define(function (require) {
      * @param {Component} component 待移除控件
      */
     overrides.remove = function (component) {
-        delete this.components[component.name];
         component.setComponentContext(null);
+        delete this.components[component.name];
     };
 
     /**
