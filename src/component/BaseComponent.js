@@ -149,6 +149,10 @@ define(function (require) {
             this.needToLoad = true;
         }
 
+        if (this.model && options.args) {
+            this.model.fill(options.args);
+        }
+
         if (options.container) {
             this.container = options.container;
         }
