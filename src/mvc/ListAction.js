@@ -135,7 +135,7 @@ define(function (require) {
             }
         }
         return waitExecute(method, args, me)
-            .then(function (response) {
+            .then(_.bind(function (response) {
                 /**
                  * @type {Object} key为datasource中的行索引，value为具体值
                  */
@@ -161,7 +161,7 @@ define(function (require) {
                     newValue: this.getNewValue(response),
                     oldValue: oldValue
                 };
-            }, function (response) {
+            }, this), function (response) {
                 clearRowLoading(listTable);
                 return Promise.reject(response);
             });
@@ -195,7 +195,7 @@ define(function (require) {
         }
 
         return waitExecute(method, args, this)
-            .then(function (response) {
+            .then(_.bind(function (response) {
                 /**
                  * @type {Object} key为datasource中的行索引，value为具体值
                  */
@@ -222,14 +222,12 @@ define(function (require) {
                 clearRowLoading(listTable);
                 listTable.setDatasource(updatedDatasource);
                 listTable.set('selectedIndex', row);
-                require('common/messager').notify(
-                    '修改完成', 1000
-                );
+                require('common/messager').succ();
                 return {
                     newValue: this.getNewValue(response),
                     oldValue: oldValue
                 };
-            }, function (response) {
+            }, this), function (response) {
                 clearRowLoading(listTable);
                 return Promise.reject(response);
             });

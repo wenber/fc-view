@@ -15,11 +15,11 @@ define(function (require) {
     var ViewContext = require('fcui/ViewContext');
     var ComponentContext = require('./ComponentContext');
     var LifeStage = require('./LifeStage');
-    var BaseModel = require('../mvc/BaseModel');
+    // 默认使用EntryModel
+    var EntryModel = require('../mvc/EntryModel');
 
     require('fcui/Panel');
     require('fcui/Dialog');
-
 
     /**
      * 判断是否支持html5
@@ -81,7 +81,7 @@ define(function (require) {
      * @param {Object} options 配置
      * @param {ViewContext} options.viewContext ui环境
      * @param {ComponentContext} options.componentContext 组件环境
-     * @param {BaseModel} options.model 数据Model
+     * @param {EntryModel} options.model 数据Model
      * @param {HtmlElement | string} container 容器
      * @param {string} template 模板内容
      */
@@ -100,7 +100,7 @@ define(function (require) {
 
         // 如果依然没有ComponentContext，则初始化一个
         if (!this.componentContext) {
-            this.setComponentContext(new ComponentContext(this.name));
+            this.setComponentContext(new ComponentContext(this.id));
         }
 
         // 提供手动初始化
@@ -115,7 +115,7 @@ define(function (require) {
      * @param {Object} options 配置
      * @param {ViewContext} options.viewContext ui环境
      * @param {ComponentContext} options.componentContext 组件环境
-     * @param {BaseModel} options.model 数据Model
+     * @param {EntryModel} options.model 数据Model
      * @param {Object=} options.args 额外的数据，可用于Model初始化使用
      * @param {HtmlElement | string} options.container 容器
      * @param {string} options.template 模板内容
@@ -141,20 +141,23 @@ define(function (require) {
 
         if (options.model) {  // 意味传入了model，此时model为共享
             this.model = options.model;
+            this.sharedModel = true;
+             // 如果直接传入了Model，不再请求
+            this.needToLoad = false;
         }
+        else {
+            this.needToLoad = true;
+        }
+
+        if (this.model && options.args) {
+            this.model.fill(options.args);
+        }
+
         if (options.container) {
             this.container = options.container;
         }
         if (options.template) {
             this.template = options.template;
-        }
-
-        if (this.model) {
-            // 如果直接传入了Model，不再请求
-            this.needToLoad = false;
-        }
-        else {
-            this.needToLoad = true;
         }
 
         this.args = options.args || this.args || {};
@@ -233,6 +236,23 @@ define(function (require) {
     };
 
     /**
+     * 为Component设置dataLoader
+     * 如果是共享的Model，此处不设为Model的主dataLoader
+     * 否则，设置为主dataLoader
+     * @param {DataLoader} dataLoader 需要关联的数据加载器实例
+     */
+    overrides.setDataLoader = function (dataLoader) {
+        var model = this.getModel();
+        if (this.sharedModel && model.dataLoader) {
+            model.addDataLoader(this.name, dataLoader);
+        }
+        else {
+            model.setDataLoader(dataLoader);
+        }
+        this.dataLoader = dataLoader;
+    };
+
+    /**
      * model对象
      * @type {?meta.Model|Object}
      */
@@ -256,12 +276,10 @@ define(function (require) {
                 this.model = new ModelType(this.args);
             }
             else {
-                this.model = new BaseModel(this.args);
+                this.model = new EntryModel(this.args);
             }
         }
-        else if (!(this.model instanceof BaseModel)) {
-            this.model = new BaseModel(this.model);
-        }
+
         return this.model;
     };
 
@@ -272,14 +290,6 @@ define(function (require) {
     overrides.getTemplatedData = function () {
 
         var model = this.getModel();
-        if (Promise.isPromise(model)) {
-            return {};
-        }
-
-        if (model && typeof model.get !== 'function') {
-            var Model = require('../mvc/BaseModel');
-            model = new Model(model);
-        }
 
         var visit = function (propertyPath) {
             var path = propertyPath.replace(/\[(\d+)\]/g, '.$1').split('.');
@@ -507,9 +517,7 @@ define(function (require) {
             }
 
             if (!this.loadingRenderer) {
-                this.loadingRenderer = function () {
-                    return '加载中...';
-                };
+                this.loadingRenderer = fc.tpl.compile('${loading|raw}');
             }
         }
         return this.loadingRenderer;
@@ -563,7 +571,7 @@ define(function (require) {
         // 显示loading界面
         var loadingRenderer = this.getLoadingRenderer();
         this.control.setProperties({
-            content: loadingRenderer(this.getTemplatedData())
+            content: loadingRenderer(model.loadingData)
         });
 
         var state = this.needToLoad ? model.load() : Promise.resolve(model);
@@ -763,6 +771,54 @@ define(function (require) {
         }).catch(_.bind(me.handleError, me));
     };
 
+    // 增加两个交互
+
+    /**
+     * 显示一条提示信息
+     * @protected
+     * @param {string | Object} content 提示的内容或完整的配置项
+     * @param {string=} title 提示框的标题，如`content`提供配置项则无此参数
+     * @return {meta.Promise} 异步状态
+     */
+    overrides.waitAlert = function (content, title) {
+        var options = typeof content === 'string'
+            ? {title: title || document.title, content: content}
+            : _.clone(content);
+        if (!options.viewContext) {
+            options.viewContext = this.viewContext;
+        }
+
+        return new Promise(function (resolve, reject) {
+            var Dialog = require('fcui/Dialog');
+            var dialog = Dialog.alert(options);
+            dialog.on('ok', resolve);
+            // 获取可以选择超时reject ?
+        });
+    };
+
+    /**
+     * 显示一条确认信息
+     * @protected
+     * @param {string | Object} content 提示的内容或完整的配置项
+     * @param {string=} title 提示框的标题，如`content`提供配置项则无此参数
+     * @return {meta.Promise} 异步状态
+     */
+    overrides.waitConfirm = function (content, title) {
+        var options = typeof content === 'string'
+            ? {title: title || document.title, content: content}
+            : _.clone(content);
+        if (!options.viewContext) {
+            options.viewContext = this.viewContext;
+        }
+
+        return new Promise(function (resolve, reject) {
+            var Dialog = require('esui/Dialog');
+            var dialog = Dialog.confirm(options);
+            dialog.on('ok', resolve);
+            dialog.on('cancel', reject);
+        });
+    };
+
     overrides.hide = function () {
         // 默认销毁
         this.close();
@@ -785,10 +841,14 @@ define(function (require) {
             this.componentContext.remove(this);
         }
         this.componentContext = null;
-        if (this.model) {
+        if (this.model && !this.sharedModel) {
             this.model.dispose();
         }
+        else {
+            this.model.removeDataLoader(this.dataLoader);
+        }
         this.model = null;
+        this.dataLoader = null;
 
         this.destroyEvents();
         this.lifeStage.changeTo(LifeStage.DISPOSED);
