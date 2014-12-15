@@ -222,9 +222,7 @@ define(function (require) {
                 clearRowLoading(listTable);
                 listTable.setDatasource(updatedDatasource);
                 listTable.set('selectedIndex', row);
-                require('common/messager').notify(
-                    '修改完成', 1000
-                );
+                require('common/messager').succ();
                 return {
                     newValue: this.getNewValue(response),
                     oldValue: oldValue
