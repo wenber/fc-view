@@ -269,6 +269,8 @@ define(function (require) {
      * 执行某个组件内部的修改行为命令
      * 区分单个和批量
      * @param {BaseComponent} component 需要被执行的组件
+     *                        可以为一个构造完成的组件，此时方法会直接show它
+     *                        也可以是一个组件的构造函数，此时方法会尝试构造它
      * @param {Event} e 事件的参数
      * @param {string} e.type 事件类型，例如pause
      * @param {Object} e.data 事件附带数据
@@ -279,15 +281,33 @@ define(function (require) {
      * @return {Promise}
      */
     overrides.executeModifyComponent = function (component, e, extraRowData) {
-        var items = this.model.get('materialList').listData;
+        var listTable = this.view.get('list-table');
+        var items = listTable.datasource;
         var rowIndexes = [].concat(e.data.row);
-        component.show({
-            model: _.extend({}, extraRowData, {
-                selectedItems: _.filter(items, function (item, index) {
-                    return _.contains(rowIndexes, index);
-                })
+        var args = _.extend({}, extraRowData, {
+            selectedItems: _.filter(items, function (item, index) {
+                return _.contains(rowIndexes, index);
             })
         });
+
+        if (typeof component === 'object') {
+            // component是一个实例，这通常意味着它是一个singleton，直接show
+            component.show({
+                args: args
+            });
+        }
+        else {
+            // component是一个function
+            fc.assert.equals(typeof component, 'function',
+                '参数`component`要么是构造函数，要么是一个singleton'
+            );
+            // fecs...
+            var Component = component;
+            component = new Component({
+                args: args
+            });
+            component.show();
+        }
         return this.executeModifyCommand(function () {
             return new Promise(function (resolve, reject) {
                 var isSaved = false;

@@ -642,7 +642,7 @@ define(function (require) {
             me.control.setContent(renderer(me.getTemplatedData()));
         }
 
-        me.control.repaint();
+        // me.control.repaint();
 
         // 请注意，生命周期的改变会自动fire同名事件
         me.lifeStage.changeTo(LifeStage.REPAINTED);
@@ -832,15 +832,16 @@ define(function (require) {
         if (this.lifeStage.is(LifeStage.DISPOSED)) {
             return;
         }
-        if (this.viewContext) {
-            this.viewContext.dispose();
-        }
+
+        // 不直接dispose viewContext……
+        this.control.dispose();
         this.viewContext = null;
-        this.control.dispose;
+
         if (this.componentContext) {
             this.componentContext.remove(this);
         }
         this.componentContext = null;
+
         if (this.model && !this.sharedModel) {
             this.model.dispose();
         }
