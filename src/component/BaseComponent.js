@@ -534,31 +534,33 @@ define(function (require) {
             state = me.render();
         }
 
-        return state.then(function () {
-            // 继续component的处理
-            try {
-                return me.initChildComponents(me.container);
-            }
-            catch (ex) {
-                var error = new Error(
-                    'Component initialization error on Component ' + me.name
-                    + ' because: ' + ex.message
-                );
-                error.actualError = ex;
-                throw error;
-            }
-        }).then(function () {
-            // 环境内的ui被重置，所以要重新绑定事件
-            me.initUIEvents();
+        return state
+            .then(function () {
+                // 继续component的处理
+                try {
+                    return me.initChildComponents(me.container);
+                }
+                catch (ex) {
+                    var error = new Error(
+                        'Component initialization error on Component ' + me.name
+                        + ' because: ' + ex.message
+                    );
+                    error.actualError = ex;
+                    throw error;
+                }
+            })
+            .then(function () {
+                // 环境内的ui被重置，所以要重新绑定事件
+                me.initUIEvents();
 
-            if (me.lifeStage.is(LifeStage.RENDERED)) {
-                // 供外部来处理交互
-                me.initBehavior();
-            }
+                if (me.lifeStage.is(LifeStage.RENDERED)) {
+                    // 供外部来处理交互
+                    me.initBehavior();
+                }
 
-            // trigger一次resize
-            // me.control.resize && me.control.resize();
-        });
+                // trigger一次resize
+                // me.control.resize && me.control.resize();
+            });
     };
 
     overrides.render = function () {
