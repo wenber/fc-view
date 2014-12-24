@@ -26,8 +26,9 @@ define(function (require) {
             try {
                 var tplName = this.viewType.prototype.template + '-loading';
                 var container = document.getElementById(context.container);
+                var loadingData = _.chain(this.model.dump()).default(this.model.loadingData).value();
                 container.innerHTML = fc.tpl.render(
-                    tplName, this.model.loadingData
+                    tplName, loadingData
                 );
                 // 有ui的话还要初始化……
                 var ViewContext = require('fcui/ViewContext');
@@ -44,7 +45,7 @@ define(function (require) {
                     valueReplacer: _.bind(
                         require('./BaseView').prototype.replaceValue,
                         {
-                            model: new Model(this.model.loadingData)
+                            model: new Model(loadingData)
                         }
                     )
                 });

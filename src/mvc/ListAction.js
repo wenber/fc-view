@@ -143,10 +143,13 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
-                var oldValue = this.getOldValue(response, listTable.datasource);
+                var oldValue = response.data.oldValue
+                    ? response.data.oldValue
+                    : this.getOldValue(response, listTable.datasource);
 
                 // 行更新
                 clearRowLoading(listTable);
+                if (processedData) {
                 _.each(processedData, function (item, index) {
                     var newData = _.extend(
                         listTable.datasource[index],
@@ -154,11 +157,13 @@ define(function (require) {
                         extraRowData
                     );
                     if (newData) {
+                            listTable.datasource[index] = newData;
                         listTable.updateRowAt(row, newData);
                     }
                 });
+                }
                 return {
-                    newValue: this.getNewValue(response),
+                    newValue: response.data.newValue ? response.data.newValue : this.getNewValue(response),
                     oldValue: oldValue
                 };
             }, this), function (response) {
@@ -203,8 +208,13 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
-                var oldValue = this.getOldValue(response, listTable.datasource);
+                var oldValue = response.data.oldValue
+                    ? response.data.oldValue
+                    : this.getOldValue(response, listTable.datasource);
 
+                // 刷新表格
+                clearRowLoading(listTable);
+                if (processedData) {
                 var updatedDatasource = _.map(
                     listTable.datasource,
                     function (item, index) {
@@ -218,13 +228,12 @@ define(function (require) {
                         return item;
                     }
                 );
-                // 刷新表格
-                clearRowLoading(listTable);
                 listTable.setDatasource(updatedDatasource);
                 listTable.set('selectedIndex', row);
+                }
                 require('common/messager').succ();
                 return {
-                    newValue: this.getNewValue(response),
+                    newValue: response.data.newValue ? response.data.newValue : this.getNewValue(response),
                     oldValue: oldValue
                 };
             }, this), function (response) {
