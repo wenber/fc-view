@@ -26,7 +26,7 @@ define(function (require) {
             try {
                 var tplName = this.viewType.prototype.template + '-loading';
                 var container = document.getElementById(context.container);
-                var loadingData = _.chain(this.model.dump()).default(this.model.loadingData).value();
+                var loadingData = _.chain(this.model.dump()).defaults(this.model.loadingData).value();
                 container.innerHTML = fc.tpl.render(
                     tplName, loadingData
                 );
