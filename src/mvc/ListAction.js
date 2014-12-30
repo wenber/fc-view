@@ -143,27 +143,34 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
-                var oldValue = response.data.oldValue
-                    ? response.data.oldValue
-                    : this.getOldValue(response, listTable.datasource);
+                var oldValue = null;
+                if (response.data) {
+                    oldValue = response.data.oldValue
+                        ? response.data.oldValue
+                        : this.getOldValue(response, listTable.datasource);
+                }
 
                 // 行更新
                 clearRowLoading(listTable);
                 if (processedData) {
-                _.each(processedData, function (item, index) {
-                    var newData = _.extend(
-                        listTable.datasource[index],
-                        item,
-                        extraRowData
-                    );
-                    if (newData) {
+                    _.each(processedData, function (item, index) {
+                        var newData = _.extend(
+                            listTable.datasource[index],
+                            item,
+                            extraRowData
+                        );
+                        if (newData) {
                             listTable.datasource[index] = newData;
-                        listTable.updateRowAt(row, newData);
-                    }
-                });
+                            listTable.updateRowAt(row, newData);
+                        }
+                    });
+                }
+                var newValue = null;
+                if (response.data) {
+                    newValue = response.data.newValue ? response.data.newValue : this.getNewValue(response);
                 }
                 return {
-                    newValue: response.data.newValue ? response.data.newValue : this.getNewValue(response),
+                    newValue: newValue,
                     oldValue: oldValue
                 };
             }, this), function (response) {
@@ -208,32 +215,39 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
-                var oldValue = response.data.oldValue
-                    ? response.data.oldValue
-                    : this.getOldValue(response, listTable.datasource);
+                var oldValue = null;
+                if (response.data) {
+                    oldValue = response.data.oldValue
+                        ? response.data.oldValue
+                        : this.getOldValue(response, listTable.datasource);
+                }
 
                 // 刷新表格
                 clearRowLoading(listTable);
                 if (processedData) {
-                var updatedDatasource = _.map(
-                    listTable.datasource,
-                    function (item, index) {
-                        if (processedData[index]) {
-                            return _.extend(
-                                item,
-                                processedData[index],
-                                extraRowData
-                            );
+                    var updatedDatasource = _.map(
+                        listTable.datasource,
+                        function (item, index) {
+                            if (processedData[index]) {
+                                return _.extend(
+                                    item,
+                                    processedData[index],
+                                    extraRowData
+                                );
+                            }
+                            return item;
                         }
-                        return item;
-                    }
-                );
-                listTable.setDatasource(updatedDatasource);
-                listTable.set('selectedIndex', row);
+                    );
+                    listTable.setDatasource(updatedDatasource);
+                    listTable.set('selectedIndex', row);
                 }
                 require('common/messager').succ();
+                var newValue = null;
+                if (response.data) {
+                    newValue = response.data.newValue ? response.data.newValue : this.getNewValue(response);
+                }
                 return {
-                    newValue: response.data.newValue ? response.data.newValue : this.getNewValue(response),
+                    newValue: newValue,
                     oldValue: oldValue
                 };
             }, this), function (response) {
