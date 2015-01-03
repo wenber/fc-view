@@ -77,7 +77,7 @@ define(function (require) {
 
     /**
      * 获取新数据。
-     * @param {Object} response
+     * @param {Object} response response
      * @return {Object}
      */
     overrides.getNewValue = function(response) {
@@ -90,8 +90,8 @@ define(function (require) {
 
     /**
      * 获取旧数据。
-     * @param {Object} response
-     * @param {Object} datasource
+     * @param {Object} response response
+     * @param {Object} datasource datasource
      * @return {Object}
      */
     overrides.getOldValue = function(response, datasource) {
@@ -170,6 +170,7 @@ define(function (require) {
                     newValue = response.data.newValue ? response.data.newValue : this.getNewValue(response);
                 }
                 return {
+                    originEvent: e,
                     newValue: newValue,
                     oldValue: oldValue
                 };
@@ -247,6 +248,7 @@ define(function (require) {
                     newValue = response.data.newValue ? response.data.newValue : this.getNewValue(response);
                 }
                 return {
+                    originEvent: e,
                     newValue: newValue,
                     oldValue: oldValue
                 };
