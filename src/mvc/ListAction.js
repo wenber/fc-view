@@ -77,7 +77,7 @@ define(function (require) {
 
     /**
      * 获取新数据。
-     * @param {Object} response response
+     * @param {Object} response
      * @return {Object}
      */
     overrides.getNewValue = function(response) {
@@ -90,8 +90,8 @@ define(function (require) {
 
     /**
      * 获取旧数据。
-     * @param {Object} response response
-     * @param {Object} datasource datasource
+     * @param {Object} response
+     * @param {Object} datasource
      * @return {Object}
      */
     overrides.getOldValue = function(response, datasource) {
@@ -309,7 +309,7 @@ define(function (require) {
         var listTable = this.view.get('list-table');
         var items = listTable.datasource;
         var rowIndexes = [].concat(e.data.row);
-        var args = _.extend({}, extraRowData, {
+        var args = _.extend({}, e ? e.data : {}, extraRowData, {
             selectedItems: _.filter(items, function (item, index) {
                 return _.contains(rowIndexes, index);
             })
