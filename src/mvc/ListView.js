@@ -37,11 +37,6 @@ define(function (require) {
             args.force = true;
         }
 
-        // @deprecated refresh参数应该被删除
-        if (e && e.data && e.data.refresh) {
-            args.force = true;
-        }
-
         this.fire('search', fc.util.customData(args));
     };
 
