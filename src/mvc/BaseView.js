@@ -442,7 +442,7 @@ define(function (require) {
     overrides.dispose = function () {
         var components = this.componentContext.components;
         if (components) {
-            _.each(this.components, function (item) {
+            _.each(components, function (item) {
                 item.dispose();
             });
             this.componentContext.components = null;
