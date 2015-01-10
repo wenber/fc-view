@@ -25,6 +25,22 @@ define(function (require) {
         //     args.order = e.order;
         // }
 
+        // 筛选条件
+        if (e.type === 'filter') {
+            _.extend(args, e.data.filters);
+        }
+
+        // er的刷新机制是如果url未发生变化的话不会刷新
+        // 如果传了force的话会在url未发生变化的情况下也刷新页面
+        if (e && e.data && e.data.force) {
+            args.force = true;
+        }
+
+        // @deprecated refresh参数应该被删除
+        if (e && e.data && e.data.refresh) {
+            args.force = true;
+        }
+
         this.fire('search', fc.util.customData(args));
     };
 

@@ -27,7 +27,10 @@ define(function (require) {
      */
     overrides.initBehavior = function () {
         this.view.on('search', function (e) {
-            this.redirect(this.model.resolveQuery(e.data));
+            var force = _.detach(e.data, 'force');
+            this.redirect(this.model.resolveQuery(e.data), {
+                force: force
+            });
         }, this);
         this.customBehavior();
     };
@@ -77,7 +80,7 @@ define(function (require) {
 
     /**
      * 获取新数据。
-     * @param {Object} response
+     * @param {Object} response 返回
      * @return {Object}
      */
     overrides.getNewValue = function(response) {
@@ -90,8 +93,8 @@ define(function (require) {
 
     /**
      * 获取旧数据。
-     * @param {Object} response
-     * @param {Object} datasource
+     * @param {Object} response 返回
+     * @param {Object} datasource 数据源
      * @return {Object}
      */
     overrides.getOldValue = function(response, datasource) {
