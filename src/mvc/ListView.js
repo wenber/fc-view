@@ -5,6 +5,7 @@
  */
 
 define(function (require) {
+    var _ = require('underscore');
     var fc = require('fc-core');
 
     /**
@@ -19,11 +20,11 @@ define(function (require) {
      */
     overrides.submitSearch = function (e) {
         var args = this.getSearchArgs();
-        // // 如果是表格排序引发的，把新的排序放进去
-        // if (e.type === 'sort') {
-        //     args.orderBy = e.field.field;
-        //     args.order = e.order;
-        // }
+        // 如果是表格排序引发的，把新的排序放进去
+        if (e.type === 'sort') {
+            args.orderBy = e.orderBy;
+            args.order = e.order;
+        }
 
         // 筛选条件
         if (e.type === 'filter') {
@@ -76,7 +77,7 @@ define(function (require) {
         //     args.endTime = moment(range[1]).format('YYYYMMDDHHmmss');
         // }
 
-        return args;
+        return _.purify(args);
     };
 
     var ListView = fc.oo.derive(require('./BaseView'), overrides);
