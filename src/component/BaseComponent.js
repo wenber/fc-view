@@ -413,6 +413,7 @@ define(function (require) {
             main: me.container,
             viewContext: viewContext,
             needFoot: true,
+            draggable: true,
             renderOptions: {
                 properties: me.getUIProperties(),
                 valueReplacer: _.bind(me.replaceValue, me)
