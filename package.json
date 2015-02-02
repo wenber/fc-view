@@ -22,9 +22,11 @@
         "dependencies": {
             "er": "~3.1.0-beta.5",
             "emc": "~1.0.0",
+            "fc-ajax": "0.x",
+            "fc-component-ria": "0.x",
             "fc-core": "0.x",
-            "fcui": "0.x",
-            "fc-component-ria": "0.x"
+            "fc-storage": "0.x",
+            "fcui": "0.x"
         }
     }
 }

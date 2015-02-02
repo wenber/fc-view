@@ -371,23 +371,23 @@ define(function (require) {
             throw error;
         }
 
-        try {
-            require('fc-component-ria').init(container, {
-                model: me.model,
-                viewContext: me.viewContext,
-                componentContext: me.componentContext
-            }).then(function () {
-                me.customDocument();
-            });
-        }
-        catch (ex) {
-            error = new Error(
-                'Component initialization error on view '
-                + 'because: ' + ex.message
-            );
-            error.actualError = ex;
-            throw error;
-        }
+        // try {
+        //     require('fc-component-ria').init(container, {
+        //         model: me.model,
+        //         viewContext: me.viewContext,
+        //         componentContext: me.componentContext
+        //     }).then(function () {
+        //         me.customDocument();
+        //     });
+        // }
+        // catch (ex) {
+        //     error = new Error(
+        //         'Component initialization error on view '
+        //         + 'because: ' + ex.message
+        //     );
+        //     error.actualError = ex;
+        //     throw error;
+        // }
     };
 
     /**
