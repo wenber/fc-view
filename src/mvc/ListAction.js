@@ -178,6 +178,7 @@ define(function (require) {
                     oldValue: oldValue
                 };
             }, this), function (response) {
+                listTable.updateRowAt(row, listTable.datasource[row]);
                 clearRowLoading(listTable);
                 return Promise.reject(response);
             });
