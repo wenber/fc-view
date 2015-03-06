@@ -322,21 +322,32 @@ define(function (require) {
      * @public
      */
     overrides.createComponentContext = function () {
-        var ComponentContext = require('../component/ComponentContext');
+        var ComponentContext = require('fc-component-ria/ComponentContext');
         var name = this.name;
 
         return new ComponentContext(name || null);
     };
 
     /**
-     * 根据name获取当前视图下的Component
+     * 根据id获取当前视图下的Component
+     * @protected
+     *
+     * @param {string} id 控件的id
+     * @return {?Component} 对应的Component
+     */
+    overrides.getComponent = function (id) {
+        return this.componentContext.get(id);
+    };
+
+    /**
+     * 根据name获取当前视图下的Component集合
      * @protected
      *
      * @param {string} name 控件的name
      * @return {?Component} 对应的Component
      */
-    overrides.getComponent = function (name) {
-        return this.componentContext.get(name);
+    overrides.getComponentByName = function (name) {
+        return this.componentContext.getByName(name);
     };
 
     /**

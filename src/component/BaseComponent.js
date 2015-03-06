@@ -12,7 +12,7 @@ define(function (require) {
     var fcui = require('fcui');
     var Promise = require('fc-core/Promise');
     var ViewContext = require('fcui/ViewContext');
-    var LifeStage = require('./LifeStage');
+    var LifeStage = require('fc-component-ria/LifeStage');
 
     // 默认使用EntryModel
     var EntryModel = require('../mvc/EntryModel');
@@ -251,6 +251,10 @@ define(function (require) {
             // 创建容器元素
             me.container = document.createElement('div');
             me.container.id = me.id;
+            me.container.setAttribute('component-id', me.id);
+            if (me.parentId) {
+                me.container.setAttribute('parent-component-id', me.parentId);
+            }
             document.body.appendChild(me.container);
             // 创建Dialog
             me.control = fcui.create(
@@ -274,6 +278,18 @@ define(function (require) {
         else {
             me.control = fcui.create('Panel', defaultOpts);
             me.control.render();
+            me.container.setAttribute('component-id', me.id);
+            if (me.parentId) {
+                me.container.setAttribute('parent-component-id', me.parentId);
+            }
+        }
+
+        // 在主元素上加个属性，以便找到`ComponentContext`
+        if (this.componentContext) {
+            this.container.setAttribute(
+                'component-context',
+                this.componentContext.id
+            );
         }
 
         // 增加className
