@@ -10,36 +10,15 @@ define(function (require) {
     var _ = require('underscore');
     var fc = require('fc-core');
     var fcui = require('fcui');
-    var EventTarget = require('fc-core/EventTarget');
     var Promise = require('fc-core/Promise');
     var ViewContext = require('fcui/ViewContext');
-    var ComponentContext = require('./ComponentContext');
-    var LifeStage = require('./LifeStage');
+    var LifeStage = require('fc-component-ria/LifeStage');
+
     // 默认使用EntryModel
     var EntryModel = require('../mvc/EntryModel');
 
     require('fcui/Panel');
     require('fcui/Dialog');
-
-    /**
-     * 判断是否支持html5
-     * @return {boolean}
-     */
-    var supportHtml5 = (function () {
-        try {
-            document.createElement('canvas').getContext('2d');
-            return true;
-        }
-        catch (e) {
-            return false;
-        }
-    })();
-
-    /**
-     * 默认样式类
-     * @type {string}
-     */
-    var BASIC_CLASS = 'component-basic';
 
     /**
      * BaseComponent类
@@ -75,40 +54,6 @@ define(function (require) {
      *
      */
     var overrides = {};
-    /**
-     * 构造函数
-     * @constructor
-     * @param {Object} options 配置
-     * @param {ViewContext} options.viewContext ui环境
-     * @param {ComponentContext} options.componentContext 组件环境
-     * @param {EntryModel} options.model 数据Model
-     * @param {HtmlElement | string} container 容器
-     * @param {string} template 模板内容
-     */
-    overrides.constructor = function (options) {
-        this.guid = fc.util.uid();
-        this.lifeStage = new LifeStage(this);
-
-        // 处理options
-        this.initOptions(options);
-
-        if (!this.name) {
-            this.name = 'component-base';
-        }
-
-        this.id = this.name + '-' + this.guid;
-
-        // 如果依然没有ComponentContext，则初始化一个
-        if (!this.componentContext) {
-            this.setComponentContext(new ComponentContext(this.id));
-        }
-
-        // 提供手动初始化
-        this.initialize();
-
-        // 请注意，生命周期的改变会自动fire同名事件
-        this.lifeStage.changeTo(LifeStage.INITED);
-    };
 
     /**
      * 处理配置，转为类的属性
@@ -122,58 +67,15 @@ define(function (require) {
      * @param {Object=} options.dialogOptions 对话框模式的配置
      */
     overrides.initOptions = function (options) {
-        options = options || {};
-
-        // kuanghongrui
-        // 以下需要对空进行判断，
-        // 要不然第一次初始化参数后，再次执行该方法时，将会被覆盖。
-        if (options.viewContext) {
-            this.viewContext = options.viewContext;
-        }
-
-        if (options.name) {
-            this.name = options.name;
-        }
-
-        if (options.componentContext) {
-            this.setComponentContext(options.componentContext);
-        }
-
-        if (options.model) {  // 意味传入了model，此时model为共享
-            this.model = options.model;
-            this.sharedModel = true;
-             // 如果直接传入了Model，不再请求
-            this.needToLoad = false;
-        }
-        else {
-            this.needToLoad = true;
-        }
-
-        if (this.model && options.args) {
-            this.model.fill(options.args);
-        }
-
-        if (options.container) {
-            this.container = options.container;
-        }
-        if (options.template) {
-            this.template = options.template;
-        }
-
-        this.args = options.args || this.args || {};
-        this.dialogOptions = _.extend(
+        var dialogOptions = _.extend(
             this.dialogOptions || {}, options.dialogOptions
         );
+
+        this.$super(arguments);
+
+        this.dialogOptions = dialogOptions;
         this.dialogOptions.closeOnHide = true;  // 强制隐藏关闭（销毁）
-
-        // 缓存options
-        this._options = options;
     };
-
-    /**
-     * 手动初始化方法
-     */
-    overrides.initialize = _.noop;
 
     /**
      * 获取ViewContext
@@ -184,22 +86,6 @@ define(function (require) {
             this.viewContext = new ViewContext(this.id);
         }
         return this.viewContext;
-    };
-
-    /**
-     * 获取主体容器的样式
-     * @return {string}
-     */
-    overrides.getClassName = function () {
-        return this.className || '';
-    };
-
-    /**
-     * 失败处理
-     * @param {mini-Event.Event} e 错误事件参数
-     */
-    overrides.handleError = function (e) {
-        fc.util.processError(e);
     };
 
     /**
@@ -243,7 +129,7 @@ define(function (require) {
      */
     overrides.setDataLoader = function (dataLoader) {
         var model = this.getModel();
-        if (this.sharedModel && model.dataLoader) {
+        if (this._options.model) {
             model.addDataLoader(this.name, dataLoader);
         }
         else {
@@ -253,58 +139,10 @@ define(function (require) {
     };
 
     /**
-     * model对象
-     * @type {?meta.Model|Object}
-     */
-    overrides.model = null;
-
-    /**
      * model类名，构造器
      * @type {?Model}
      */
-    overrides.modelType = null;
-
-    /**
-     * 获取数据对象
-     * @return {Promise|meta.Model|Object} Promise对象或者Model对象或Object
-     */
-    overrides.getModel = function () {
-        if (!this.model) {
-            if (this.modelType) {
-                // fecs……
-                var ModelType = this.modelType;
-                this.model = new ModelType(this.args);
-            }
-            else {
-                this.model = new EntryModel(this.args);
-            }
-        }
-
-        return this.model;
-    };
-
-    /**
-     * 获取模板数据
-     * @return {Object} 为etpl定制的templateData
-     */
-    overrides.getTemplatedData = function () {
-
-        var model = this.getModel();
-
-        var visit = function (propertyPath) {
-            var path = propertyPath.replace(/\[(\d+)\]/g, '.$1').split('.');
-            var propertyName = path.shift();
-            var value = model.get(propertyName);
-
-            while (value && (propertyName = path.shift())) {
-                value = value[propertyName];
-            }
-
-            return value;
-        };
-
-        return {get: visit, relatedModel: model};
-    };
+    overrides.modelType = EntryModel;
 
     /**
      * UI配置
@@ -373,9 +211,10 @@ define(function (require) {
 
         if (prefix === '@' || prefix === '*') {
             var path = actualValue.split('.');
-            var result = typeof this.model.get === 'function'
-                ? this.model.get(path[0])
-                : this.model[path[0]];
+            var model = this.getModel();
+            var result = typeof model.get === 'function'
+                ? model.get(path[0])
+                : model[path[0]];
             return path.length > 1
                 ? getProperty(result, path.slice(1))
                 : result;
@@ -383,18 +222,6 @@ define(function (require) {
 
         return value;
     };
-
-    function getClassName() {
-        var classNames = [BASIC_CLASS];
-        if (supportHtml5) {
-            classNames.push('html5');
-        }
-        var thisClassName = this.getClassName();
-        if (thisClassName) {
-            classNames.push(thisClassName);
-        }
-        return classNames.join(' ');
-    }
 
     /**
      * 创建主体容器
@@ -413,6 +240,7 @@ define(function (require) {
             main: me.container,
             viewContext: viewContext,
             needFoot: true,
+            draggable: true,
             renderOptions: {
                 properties: me.getUIProperties(),
                 valueReplacer: _.bind(me.replaceValue, me)
@@ -423,6 +251,10 @@ define(function (require) {
             // 创建容器元素
             me.container = document.createElement('div');
             me.container.id = me.id;
+            me.container.setAttribute('component-id', me.id);
+            if (me.parentId) {
+                me.container.setAttribute('parent-component-id', me.parentId);
+            }
             document.body.appendChild(me.container);
             // 创建Dialog
             me.control = fcui.create(
@@ -446,24 +278,23 @@ define(function (require) {
         else {
             me.control = fcui.create('Panel', defaultOpts);
             me.control.render();
+            me.container.setAttribute('component-id', me.id);
+            if (me.parentId) {
+                me.container.setAttribute('parent-component-id', me.parentId);
+            }
+        }
+
+        // 在主元素上加个属性，以便找到`ComponentContext`
+        if (this.componentContext) {
+            this.container.setAttribute(
+                'component-context',
+                this.componentContext.id
+            );
         }
 
         // 增加className
-        me.container.className += ' ' + getClassName.call(me);
+        me.container.className += ' ' + me.getClassName();
     };
-
-    overrides.prepare = _.noop;
-
-
-    /**
-     * 模板的HTML，优先级高于templateName
-     */
-    overrides.template = null;
-
-    /**
-     * 模板的名称
-     */
-    overrides.templateName = null;
 
     /**
      * loading的HTML，优先级高于loadingTemplateName
@@ -476,36 +307,12 @@ define(function (require) {
     overrides.loadingTemplateName = null;
 
     /**
-     * 主体内容渲染器
-     * @param {Object|meta.Model} data 数据
-     * @return {string} 主体内容的HTML
-     */
-    overrides.renderer = null;
-    overrides.getRenderer = function () {
-        if (this.renderer == null) {
-            // 渲染器
-            if (this.template) {
-                this.renderer = fc.tpl.compile(this.template);
-            }
-            else if (this.templateName) {
-                this.renderer = fc.tpl.getRenderer(this.templateName);
-            }
-
-            if (!this.renderer) {
-                this.renderer = function () {
-                    return '';
-                };
-            }
-        }
-        return this.renderer;
-    };
-
-    /**
      * loading内容渲染器
      */
     overrides.loadingRenderer = null;
+    var DEFAULT_LOADING_TPL = '${loading|raw}';
     overrides.getLoadingRenderer = function () {
-        if (this.renderer == null) {
+        if (this.loadingRenderer == null) {
             // 渲染器
             if (this.loadingTemplate) {
                 this.loadingRenderer = fc.tpl.compile(this.loadingTemplate);
@@ -517,50 +324,10 @@ define(function (require) {
             }
 
             if (!this.loadingRenderer) {
-                this.loadingRenderer = fc.tpl.compile('${loading|raw}');
+                this.loadingRenderer = fc.tpl.compile(DEFAULT_LOADING_TPL);
             }
         }
         return this.loadingRenderer;
-    };
-
-    overrides.enter = function () {
-        var me = this;
-        var state;
-        if (!me.lifeStage.is(LifeStage.NEW | LifeStage.INITED)) {
-            me.control.show();
-            state = me.repaint();
-        }
-        else {
-            state = me.render();
-        }
-
-        return state
-            .then(function () {
-                // 继续component的处理
-                try {
-                    return me.initChildComponents(me.container);
-                }
-                catch (ex) {
-                    var error = new Error(
-                        'Component initialization error on Component ' + me.name
-                        + ' because: ' + ex.message
-                    );
-                    error.actualError = ex;
-                    throw error;
-                }
-            })
-            .then(function () {
-                // 环境内的ui被重置，所以要重新绑定事件
-                me.initUIEvents();
-
-                if (me.lifeStage.is(LifeStage.RENDERED)) {
-                    // 供外部来处理交互
-                    me.initBehavior();
-                }
-
-                // trigger一次resize
-                // me.control.resize && me.control.resize();
-            });
     };
 
     overrides.render = function () {
@@ -568,57 +335,19 @@ define(function (require) {
         this.initStructure();
 
         var model = this.getModel();
-        this.fire('loading');
 
         // 显示loading界面
         var loadingRenderer = this.getLoadingRenderer();
         this.control.setProperties({
             content: loadingRenderer(model.loadingData)
         });
+        this.fire('loading');
 
-        var state = this.needToLoad ? model.load() : Promise.resolve(model);
-
-        return state
+        var state = model.load()
             .then(_.bind(this.prepare, this))
-            .then(_.bind(this.finishRender, this))
-            .catch(_.bind(this.handleError, this));
-    };
-
-    overrides.setComponentContext = function (componentContext) {
-        // 为了避免程序流转，降低性能，以及死循环，做一次判断
-        var oldComponentContext = this.componentContext;
-        if (oldComponentContext === componentContext) {
-            return;
-        }
-
-        // 从老视图环境中清除
-        if (oldComponentContext) {
-            this.componentContext = null;
-            oldComponentContext.remove(this);
-        }
-
-        // 注册到新视图环境
-        this.componentContext = componentContext;
-        componentContext && componentContext.add(this);
-
-        // 在主元素上加个属性，以便找到`ComponentContext`
-        if (this.componentContext && this.lifeStage.is(LifeStage.RENDERED)) {
-            this.container.setAttribute(
-                'component-context',
-                this.componentContext.id
-            );
-        }
-    };
-
-    /**
-     * 根据id获取当前视图下的Component
-     * @protected
-     *
-     * @param {string} name 控件的name
-     * @return {?Component} 对应的控件
-     */
-    overrides.getComponent = function (name) {
-        return this.componentContext.get(name);
+            .then(_.bind(this.finishRender, this));
+        state.catch(_.bind(this.handleError, this));
+        return state;
     };
 
     overrides.finishRender = function () {
@@ -634,6 +363,15 @@ define(function (require) {
 
         // 请注意，生命周期的改变会自动fire同名事件
         me.lifeStage.changeTo(LifeStage.RENDERED);
+
+        // 环境内的ui被重置，所以要重新绑定事件
+        me.initUIEvents();
+
+        // 供外部来处理交互
+        me.initBehavior();
+
+        // 初始化事件
+        me.bindEvents();
     };
 
     overrides.repaint = function () {
@@ -649,10 +387,14 @@ define(function (require) {
         // 请注意，生命周期的改变会自动fire同名事件
         me.lifeStage.changeTo(LifeStage.REPAINTED);
 
+        // 环境内的ui被重置，所以要重新绑定事件
+        me.initUIEvents();
+
+        // 初始化事件
+        me.bindEvents();
+
         return Promise.resolve();
     };
-
-    overrides.initBehavior = function () {};
 
     /**
      * 给指定的控件绑定事件
@@ -752,27 +494,6 @@ define(function (require) {
         }
     };
 
-    overrides.initChildComponents = function (container) {
-        return require('fc-component-ria').init(container, {
-            viewContext: this.viewContext,
-            componentContext: this.componentContext,
-            model: this.getModel()
-        });
-    };
-
-    overrides.refresh = function () {
-        // 现在先为repaint罢
-        this.enter();
-    };
-
-    overrides.show = function () {
-        var me = this;
-
-        me.enter().then(function () {
-            me.fire('showed');
-        }).catch(_.bind(me.handleError, me));
-    };
-
     // 增加两个交互
 
     /**
@@ -821,15 +542,6 @@ define(function (require) {
         });
     };
 
-    overrides.hide = function () {
-        // 默认销毁
-        this.close();
-    };
-
-    overrides.close = function () {
-        this.dispose();
-    };
-
     overrides.dispose = function () {
         if (this.lifeStage.is(LifeStage.DISPOSED)) {
             return;
@@ -839,45 +551,10 @@ define(function (require) {
         this.control.dispose();
         this.viewContext = null;
 
-        if (this.componentContext) {
-            this.componentContext.remove(this);
-        }
-        this.componentContext = null;
-
-        if (this.model && !this.sharedModel) {
-            this.model.dispose();
-        }
-        else {
-            this.model.removeDataLoader(this.dataLoader);
-        }
-        this.model = null;
-        this.dataLoader = null;
-
-        this.destroyEvents();
-        this.lifeStage.changeTo(LifeStage.DISPOSED);
+        this.$super(arguments);
     };
 
-    /**
-     * 在当前component所属容器内，寻找符合给定query的DOM节点
-     * @param {string} query CSS query
-     * @return {HTMLElement} 找到的节点
-     */
-    overrides.find = function (query) {
-        var el = this.container || this.control.main;
-        return el.querySelector(query);
-    };
-
-    /**
-     * 在当前component所属容器内，寻找符合给定query的一组DOM节点
-     * @param {string} query CSS query
-     * @return {Array<HTMLElement>} 找到的节点
-     */
-    overrides.findAll = function (query) {
-        var el = this.container || this.control.main;
-        return el.querySelectorAll(query);
-    };
-
-    var BaseComponent = fc.oo.derive(EventTarget, overrides);
+    var BaseComponent = fc.oo.derive(require('fc-component-ria/BaseComponent'), overrides);
 
     return BaseComponent;
 });

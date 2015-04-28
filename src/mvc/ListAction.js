@@ -27,7 +27,10 @@ define(function (require) {
      */
     overrides.initBehavior = function () {
         this.view.on('search', function (e) {
-            this.redirect(this.model.resolveQuery(e.data));
+            var force = _.detach(e.data, 'force');
+            this.redirect(this.model.resolveQuery(e.data), {
+                force: force
+            });
         }, this);
         this.customBehavior();
     };
@@ -77,7 +80,7 @@ define(function (require) {
 
     /**
      * 获取新数据。
-     * @param {Object} response
+     * @param {Object} response 返回
      * @return {Object}
      */
     overrides.getNewValue = function(response) {
@@ -90,8 +93,8 @@ define(function (require) {
 
     /**
      * 获取旧数据。
-     * @param {Object} response
-     * @param {Object} datasource
+     * @param {Object} response 返回
+     * @param {Object} datasource 数据源
      * @return {Object}
      */
     overrides.getOldValue = function(response, datasource) {
@@ -143,30 +146,39 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
-                var oldValue = response.data.oldValue
-                    ? response.data.oldValue
-                    : this.getOldValue(response, listTable.datasource);
+                var oldValue = null;
+                if (response.data) {
+                    oldValue = response.data.oldValue
+                        ? response.data.oldValue
+                        : this.getOldValue(response, listTable.datasource);
+                }
 
                 // 行更新
                 clearRowLoading(listTable);
                 if (processedData) {
-                _.each(processedData, function (item, index) {
-                    var newData = _.extend(
-                        listTable.datasource[index],
-                        item,
-                        extraRowData
-                    );
-                    if (newData) {
+                    _.each(processedData, function (item, index) {
+                        var newData = _.extend(
+                            listTable.datasource[index],
+                            item,
+                            extraRowData
+                        );
+                        if (newData) {
                             listTable.datasource[index] = newData;
-                        listTable.updateRowAt(row, newData);
-                    }
-                });
+                            listTable.updateRowAt(row, newData);
+                        }
+                    });
+                }
+                var newValue = null;
+                if (response.data) {
+                    newValue = response.data.newValue ? response.data.newValue : this.getNewValue(response);
                 }
                 return {
-                    newValue: response.data.newValue ? response.data.newValue : this.getNewValue(response),
+                    originEvent: e,
+                    newValue: newValue,
                     oldValue: oldValue
                 };
             }, this), function (response) {
+                listTable.updateRowAt(row, listTable.datasource[row]);
                 clearRowLoading(listTable);
                 return Promise.reject(response);
             });
@@ -208,32 +220,40 @@ define(function (require) {
                     response, e, extraRowData
                 );
 
-                var oldValue = response.data.oldValue
-                    ? response.data.oldValue
-                    : this.getOldValue(response, listTable.datasource);
+                var oldValue = null;
+                if (response.data) {
+                    oldValue = response.data.oldValue
+                        ? response.data.oldValue
+                        : this.getOldValue(response, listTable.datasource);
+                }
 
                 // 刷新表格
                 clearRowLoading(listTable);
                 if (processedData) {
-                var updatedDatasource = _.map(
-                    listTable.datasource,
-                    function (item, index) {
-                        if (processedData[index]) {
-                            return _.extend(
-                                item,
-                                processedData[index],
-                                extraRowData
-                            );
+                    var updatedDatasource = _.map(
+                        listTable.datasource,
+                        function (item, index) {
+                            if (processedData[index]) {
+                                return _.extend(
+                                    item,
+                                    processedData[index],
+                                    extraRowData
+                                );
+                            }
+                            return item;
                         }
-                        return item;
-                    }
-                );
-                listTable.setDatasource(updatedDatasource);
-                listTable.set('selectedIndex', row);
+                    );
+                    listTable.setDatasource(updatedDatasource);
+                    listTable.set('selectedIndex', row);
                 }
                 require('common/messager').succ();
+                var newValue = null;
+                if (response.data) {
+                    newValue = response.data.newValue ? response.data.newValue : this.getNewValue(response);
+                }
                 return {
-                    newValue: response.data.newValue ? response.data.newValue : this.getNewValue(response),
+                    originEvent: e,
+                    newValue: newValue,
                     oldValue: oldValue
                 };
             }, this), function (response) {
@@ -293,7 +313,7 @@ define(function (require) {
         var listTable = this.view.get('list-table');
         var items = listTable.datasource;
         var rowIndexes = [].concat(e.data.row);
-        var args = _.extend({}, extraRowData, {
+        var args = _.extend({}, e ? e.data : {}, extraRowData, {
             selectedItems: _.filter(items, function (item, index) {
                 return _.contains(rowIndexes, index);
             })

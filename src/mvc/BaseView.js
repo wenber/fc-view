@@ -322,21 +322,32 @@ define(function (require) {
      * @public
      */
     overrides.createComponentContext = function () {
-        var ComponentContext = require('../component/ComponentContext');
+        var ComponentContext = require('fc-component-ria/ComponentContext');
         var name = this.name;
 
         return new ComponentContext(name || null);
     };
 
     /**
-     * 根据name获取当前视图下的Component
+     * 根据id获取当前视图下的Component
+     * @protected
+     *
+     * @param {string} id 控件的id
+     * @return {?Component} 对应的Component
+     */
+    overrides.getComponent = function (id) {
+        return this.componentContext.get(id);
+    };
+
+    /**
+     * 根据name获取当前视图下的Component集合
      * @protected
      *
      * @param {string} name 控件的name
      * @return {?Component} 对应的Component
      */
-    overrides.getComponent = function (name) {
-        return this.componentContext.get(name);
+    overrides.getComponentByName = function (name) {
+        return this.componentContext.getByName(name);
     };
 
     /**
@@ -360,6 +371,7 @@ define(function (require) {
         var error;
         try {
             require('esui').init(container, options);
+            me.bindEvents();
         }
         catch (ex) {
             error = new Error(
@@ -370,24 +382,23 @@ define(function (require) {
             throw error;
         }
 
-        try {
-            require('fc-component-ria').init(container, {
-                model: me.model,
-                viewContext: me.viewContext,
-                componentContext: me.componentContext
-            }).then(function () {
-                me.bindEvents();
-                me.customDocument();
-            });
-        }
-        catch (ex) {
-            error = new Error(
-                'Component initialization error on view '
-                + 'because: ' + ex.message
-            );
-            error.actualError = ex;
-            throw error;
-        }
+        // try {
+        //     require('fc-component-ria').init(container, {
+        //         model: me.model,
+        //         viewContext: me.viewContext,
+        //         componentContext: me.componentContext
+        //     }).then(function () {
+        //         me.customDocument();
+        //     });
+        // }
+        // catch (ex) {
+        //     error = new Error(
+        //         'Component initialization error on view '
+        //         + 'because: ' + ex.message
+        //     );
+        //     error.actualError = ex;
+        //     throw error;
+        // }
     };
 
     /**
@@ -440,15 +451,17 @@ define(function (require) {
      * @protected
      */
     overrides.dispose = function () {
+        var components = this.componentContext.components;
+        if (components) {
+            _.each(components, function (item) {
+                item.dispose();
+            });
+            this.componentContext.components = null;
+        }
+        this.componentContext = null;
         if (this.viewContext) {
             this.viewContext.dispose();
             this.viewContext = null;
-        }
-        if (this.components) {
-            _.each(this.components, function (item) {
-                item.dispose();
-            });
-            this.components = null;
         }
         this.$super(arguments);
     };
